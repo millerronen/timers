@@ -1,6 +1,10 @@
 const axios = require("axios");
 const pool = require("../db");
-const schedule = require("node-schedule");
+
+// Constants
+const TIMER_CHECK_INTERVAL = 60 * 1000; // 1 minute
+const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
+const RETENTION_DAYS = 30;
 
 // Function to create and schedule a timer
 async function createTimer(req, res) {
@@ -154,9 +158,8 @@ async function markTimerAsCompleted(timerId) {
 // Function to periodically delete completed timers older than a certain threshold
 async function cleanupCompletedTimers() {
   try {
-    const retentionDays = 30; // Adjust as needed
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+    cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
 
     await pool.query(
       "DELETE FROM timers WHERE status = 'completed' AND start_time <= ?",
@@ -167,10 +170,8 @@ async function cleanupCompletedTimers() {
   }
 }
 
-// Schedule a recurring task to check and trigger expired timers
-const timerCheckInterval = setInterval(checkAndTriggerExpiredTimers, 60000); // Run every minute
-
-// Schedule a recurring task to clean up completed timers
-const cleanupInterval = setInterval(cleanupCompletedTimers, 3600000); // Run hourly
-
 module.exports = { createTimer, getTimerStatus };
+
+// Schedule recurring tasks
+setInterval(checkAndTriggerExpiredTimers, TIMER_CHECK_INTERVAL);
+setInterval(cleanupCompletedTimers, CLEANUP_INTERVAL);
