@@ -1,0 +1,17 @@
+/node_modules
+package-lock.json
+.env
+/dist
+/build
+/logs
+/temp
+.vscode/
+.idea/
+.DS_Store
+.suo
+.user
+.history
+/.vscode
+/.idea
+/bin
+/coverage
