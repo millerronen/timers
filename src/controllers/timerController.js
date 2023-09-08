@@ -114,6 +114,11 @@ async function removeTimerFromDatabase(timerId) {
 async function getTimerStatus(req, res) {
   const timerId = req.params.id;
 
+  // Validate timerId to ensure it's a valid integer
+  if (!Number.isInteger(Number(timerId))) {
+    return res.status(400).json({ error: "Invalid timer ID" });
+  }
+
   try {
     // Query the database to get the timer details
     const [results] = await pool.query(
