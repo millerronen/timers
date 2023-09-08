@@ -21,7 +21,8 @@ async function createTimersTableIfNotExists() {
     url VARCHAR(255),
     start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     trigger_time TIMESTAMP,
-    status ENUM('pending', 'completed') DEFAULT 'pending'
+    status ENUM('pending', 'completed') DEFAULT 'pending',
+    INDEX idx_status_trigger_time (status, trigger_time)
   )
 `);
 
