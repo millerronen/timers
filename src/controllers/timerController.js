@@ -16,24 +16,27 @@ async function createTimer(req, res) {
     return res.status(400).json({ error: "Invalid input data" });
   }
 
+  // Calculate the total time in seconds
+  const totalTimeInSeconds = hours * 3600 + minutes * 60 + seconds;
+
+  // Calculate the total time in milliseconds
+  const totalTimeInMilliseconds =
+    hours * 3600000 + minutes * 60000 + seconds * 1000;
+
+  // Get the current time when the timer is created
+  const creationTime = new Date();
+
+  // Calculate the trigger time
+  const triggerTime = new Date(
+    creationTime.getTime() + totalTimeInMilliseconds
+  );
+
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+
   try {
-    // Calculate the total time in seconds
-    const totalTimeInSeconds = hours * 3600 + minutes * 60 + seconds;
-
-    // Calculate the total time in milliseconds
-    const totalTimeInMilliseconds =
-      hours * 3600000 + minutes * 60000 + seconds * 1000;
-
-    // Get the current time when the timer is created
-    const creationTime = new Date();
-
-    // Calculate the trigger time
-    const triggerTime = new Date(
-      creationTime.getTime() + totalTimeInMilliseconds
-    );
-
     // Insert timer data into the database with status "pending"
-    const [results] = await pool.query(
+    const [results] = await connection.query(
       "INSERT INTO timers (hours, minutes, seconds, url, start_time, trigger_time, status) VALUES (?, ?, ?, ?, NOW(), ?, 'pending')",
       [hours, minutes, seconds, url, triggerTime]
     );
@@ -43,14 +46,20 @@ async function createTimer(req, res) {
     // Schedule the timer to execute after the specified time
     scheduleTimer(timerId, totalTimeInMilliseconds, url);
 
+    // Commit the transaction
+    await connection.commit();
+
     // Respond with the timer ID and time left
     res.json({
       id: timerId,
       time_left: totalTimeInSeconds,
     });
   } catch (error) {
+    await connection.rollback(); // Rollback the transaction on error
     console.error("Error creating timer:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    connection.release(); // Release the connection back to the pool
   }
 }
 
@@ -63,7 +72,7 @@ function scheduleTimer(timerId, totalTimeInMilliseconds, url) {
       const firingTime = new Date();
 
       // Trigger the webhook by making a POST request to the URL with the timer ID appended
-      await axios.post(`${url}/${timerId}`);
+      await axios.post(`${url}`, `${timerId}`);
 
       // Log the firing time
       console.log(`Webhook fired for timer ID ${timerId} at ${firingTime}`);
