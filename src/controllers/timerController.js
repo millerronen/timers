@@ -1,14 +1,20 @@
 const axios = require("axios");
-const pool = require("../db");
+const pool = require("../database/db");
 
 // Constants
 const TIMER_CHECK_INTERVAL = 60 * 1000; // 1 minute
 const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 const RETENTION_DAYS = 30;
+const MAX_ALLOWED_TIME_IN_SECONDS = 30 * 24 * 3600;
 
 // Function to create and schedule a timer
 async function createTimer(req, res) {
   const { hours, minutes, seconds, url } = req.body;
+
+  // Validate the input
+  if (!validateInput(hours, minutes, seconds, url)) {
+    return res.status(400).json({ error: "Invalid input data" });
+  }
 
   try {
     // Calculate the total time in seconds
@@ -40,7 +46,6 @@ async function createTimer(req, res) {
     // Respond with the timer ID and time left
     res.json({
       id: timerId,
-      created_at: creationTime,
       time_left: totalTimeInSeconds,
     });
   } catch (error) {
@@ -52,7 +57,7 @@ async function createTimer(req, res) {
 // Function to schedule and execute a timer
 function scheduleTimer(timerId, totalTimeInMilliseconds, url) {
   // Schedule the timer to execute after the specified time
-  setTimeout(async () => {
+  setTimeout(async function fireWebhookAndCleanup() {
     try {
       // Get the current time when the webhook is fired
       const firingTime = new Date();
@@ -69,6 +74,21 @@ function scheduleTimer(timerId, totalTimeInMilliseconds, url) {
       console.error("Error triggering webhook:", error);
     }
   }, totalTimeInMilliseconds);
+}
+
+// Create a validation function
+function validateInput(hours, minutes, seconds, url) {
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    !Number.isInteger(seconds) ||
+    typeof url !== "string" ||
+    !url.startsWith("http") ||
+    hours * 3600 + minutes * 60 + seconds > MAX_ALLOWED_TIME_IN_SECONDS // check if the total time exceeds 30 days - see README.md
+  ) {
+    return false;
+  }
+  return true;
 }
 
 // Function to remove the timer from the database
@@ -126,18 +146,20 @@ async function getTimerStatus(req, res) {
 async function checkAndTriggerExpiredTimers() {
   try {
     // Retrieve timers with status "pending" and trigger time in the past
-    const [results] = await pool.query(
+    const [result] = await pool.query(
       "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= NOW()"
     );
 
-    for (const timer of results) {
-      const { id, url } = timer;
+    if (Array.isArray(result) && result.length > 0) {
+      for (const timer of result) {
+        const { id, url } = timer;
 
-      // Trigger the webhook by making a POST request to the URL with the timer ID appended
-      await axios.post(`${url}/${id}`);
+        // Trigger the webhook by making a POST request to the URL with the timer ID appended
+        await axios.post(`${url}/${id}`);
 
-      // Mark the timer as "completed" in the database
-      await markTimerAsCompleted(id);
+        // Mark the timer as "completed" in the database
+        await markTimerAsCompleted(id);
+      }
     }
   } catch (error) {
     console.error("Error checking and triggering expired timers:", error);

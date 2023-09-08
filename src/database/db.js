@@ -1,5 +1,5 @@
 const mysql = require("mysql2/promise");
-const config = require("./config/config");
+const config = require("../../config/config");
 
 // Function to create the timers table if it doesn't exist
 async function createTimersTableIfNotExists() {
