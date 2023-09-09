@@ -63,53 +63,6 @@ async function createTimer(req, res) {
   }
 }
 
-// Function to schedule and execute a timer
-function scheduleTimer(timerId, totalTimeInMilliseconds, url) {
-  // Schedule the timer to execute after the specified time
-  setTimeout(async function fireWebhookAndCleanup() {
-    try {
-      // Get the current time when the webhook is fired
-      const firingTime = new Date();
-
-      // Trigger the webhook by making a POST request to the URL with the timer ID appended
-      await axios.post(`${url}`, `${timerId}`);
-
-      // Log the firing time
-      console.log(`Webhook fired for timer ID ${timerId} at ${firingTime}`);
-
-      // Remove the timer from the database after the webhook has been sent successfully
-      await removeTimerFromDatabase(timerId);
-    } catch (error) {
-      console.error("Error triggering webhook:", error);
-    }
-  }, totalTimeInMilliseconds);
-}
-
-// Create a validation function
-function validateInput(hours, minutes, seconds, url) {
-  if (
-    !Number.isInteger(hours) ||
-    !Number.isInteger(minutes) ||
-    !Number.isInteger(seconds) ||
-    typeof url !== "string" ||
-    !url.startsWith("http") ||
-    hours * 3600 + minutes * 60 + seconds > MAX_ALLOWED_TIME_IN_SECONDS // check if the total time exceeds 30 days - see README.md
-  ) {
-    return false;
-  }
-  return true;
-}
-
-// Function to remove the timer from the database
-async function removeTimerFromDatabase(timerId) {
-  try {
-    // Implement SQL query to remove the timer based on its ID
-    await pool.query("DELETE FROM timers WHERE id = ?", [timerId]);
-  } catch (error) {
-    console.error("Error removing timer from the database:", error);
-  }
-}
-
 // Function to get timer status by ID
 async function getTimerStatus(req, res) {
   const timerId = req.params.id;
@@ -153,6 +106,54 @@ async function getTimerStatus(req, res) {
   } catch (error) {
     console.error("Error getting timer status:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+}
+
+// Function to schedule and execute a timer
+function scheduleTimer(timerId, totalTimeInMilliseconds, url) {
+  // Schedule the timer to execute after the specified time
+  setTimeout(async function fireWebhookAndCleanup() {
+    try {
+      // Get the current time when the webhook is fired
+      const firingTime = new Date();
+
+      // Trigger the webhook by making a POST request to the URL with the timer ID appended
+      await axios.post(`${url}`, `${timerId}`);
+
+      // Log the firing time
+      console.log(`Webhook fired for timer ID ${timerId} at ${firingTime}`);
+
+      // Mark the timer as "completed" in the database
+      await markTimerAsCompleted(timerId);
+    } catch (error) {
+      console.error("Error triggering webhook:", error);
+    }
+  }, totalTimeInMilliseconds);
+}
+
+// Create a validation function
+function validateInput(hours, minutes, seconds, url) {
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    !Number.isInteger(seconds) ||
+    typeof url !== "string" ||
+    !url.startsWith("http") ||
+    hours * 3600 + minutes * 60 + seconds > MAX_ALLOWED_TIME_IN_SECONDS // check if the total time exceeds 30 days - see README.md
+  ) {
+    return false;
+  }
+  return true;
+}
+
+// Function to mark a timer as completed
+async function markTimerAsCompleted(timerId) {
+  try {
+    await pool.query("UPDATE timers SET status = 'completed' WHERE id = ?", [
+      timerId,
+    ]);
+  } catch (error) {
+    console.error("Error marking timer as completed:", error);
   }
 }
 
