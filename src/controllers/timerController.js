@@ -38,8 +38,8 @@ async function createTimer(req, res) {
   try {
     // Insert timer data into the database with status "pending"
     const [results] = await connection.query(
-      "INSERT INTO timers (hours, minutes, seconds, url, start_time, trigger_time, status) VALUES (?, ?, ?, ?, NOW(), ?, 'pending')",
-      [hours, minutes, seconds, url, triggerTime]
+      "INSERT INTO timers (hours, minutes, seconds, url, start_time, trigger_time, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
+      [hours, minutes, seconds, url, creationTime, triggerTime]
     );
 
     const timerId = results.insertId;
