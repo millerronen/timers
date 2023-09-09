@@ -18,7 +18,7 @@ const customFormat = "[:date[clf]] :method :url :status :response-time ms"; // D
 app.use(morgan(customFormat, { stream: logStream }));
 
 app.use(bodyParser.json());
-app.use("/api", timerRoutes); // Define a base path for my routes
+app.use("/", timerRoutes); // Define a base path for my routes
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
