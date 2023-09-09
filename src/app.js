@@ -11,9 +11,12 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Create a write stream to log requests to a file
-const logStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
-  flags: "a", // Append to the file
-});
+const logStream = fs.createWriteStream(
+  path.join(__dirname, "../logs/access.log"),
+  {
+    flags: "a", // Append to the file
+  }
+);
 
 const customFormat = "[:date[clf]] :method :url :status :response-time ms"; // Define a custom format for the logger
 app.use(morgan(customFormat, { stream: logStream }));

@@ -1,11 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 
-const MEMORY_CHECK_INTERVAL_MS = 1 * 1000; // 1 second
+const MEMORY_CHECK_INTERVAL_MS = 60 * 1 * 1000; // 1 minute
 const MEMORY_LIMIT_MB = 200; // Set your memory limit in megabytes
 
 // Specify the path to the log file
-const logFilePath = path.join(__dirname, "../utility/memory_usage.log");
+const logFilePath = path.join(__dirname, "../logs/memory_usage.log");
 
 // Create a write stream to the log file
 const logStream = fs.createWriteStream(logFilePath, {
