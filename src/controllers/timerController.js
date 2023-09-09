@@ -6,6 +6,7 @@ const TIMER_CHECK_INTERVAL = 60 * 1000; // 1 minute
 const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 const RETENTION_DAYS = 30;
 const MAX_ALLOWED_TIME_IN_SECONDS = 30 * 24 * 3600;
+const BATCH_INTERVAL = 1000; // 1 seconds
 
 // Function to create and schedule a timer
 async function createTimer(req, res) {
@@ -42,9 +43,6 @@ async function createTimer(req, res) {
     );
 
     const timerId = results.insertId;
-
-    // Schedule the timer to execute after the specified time
-    scheduleTimer(timerId, totalTimeInMilliseconds, url);
 
     // Commit the transaction
     await connection.commit();
@@ -109,26 +107,59 @@ async function getTimerStatus(req, res) {
   }
 }
 
-// Function to schedule and execute a timer
-function scheduleTimer(timerId, totalTimeInMilliseconds, url) {
-  // Schedule the timer to execute after the specified time
-  setTimeout(async function fireWebhookAndCleanup() {
-    try {
-      // Get the current time when the webhook is fired
-      const firingTime = new Date();
+// Function to periodically schedule timers in batches
+async function scheduleTimersInBatches() {
+  try {
+    // Calculate the time window for timers to be scheduled (e.g., next 10 seconds)
+    const currentTime = new Date();
+    const endTime = new Date(currentTime.getTime() + BATCH_INTERVAL);
 
-      // Trigger the webhook by making a POST request to the URL with the timer ID appended
-      await axios.post(`${url}`, `${timerId}`);
+    // Retrieve timers with status "pending" and trigger time within the time window
+    const [result] = await pool.query(
+      "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= ? AND trigger_time >= NOW()",
+      [endTime]
+    );
 
-      // Log the firing time
-      console.log(`Webhook fired for timer ID ${timerId} at ${firingTime}`);
+    if (Array.isArray(result) && result.length > 0) {
+      for (const timer of result) {
+        const { id: timerId, url, trigger_time, status } = timer;
 
-      // Mark the timer as "completed" in the database
-      await markTimerAsCompleted(timerId);
-    } catch (error) {
-      console.error("Error triggering webhook:", error);
+        // Check if the timer is already being processed or completed
+        if (status === "processing" || status === "completed") {
+          continue; // Skip this timer
+        }
+
+        // Calculate the time left until the timer should fire
+        const timeLeftInMilliseconds = new Date(trigger_time) - currentTime;
+
+        // Update the timer's status to "processing"
+        await updateTimerStatus(timerId, "processing");
+
+        // Schedule the timer to execute after the calculated time left
+        setTimeout(async function fireWebhookAndCleanup() {
+          try {
+            // Get the current time when the webhook is fired
+            const firingTime = new Date();
+
+            // Trigger the webhook by making a POST request to the URL with the timer ID appended
+            await axios.post(`${url}/${timerId}`);
+
+            // Log the firing time
+            console.log(
+              `Webhook fired for timer ID ${timerId} at ${firingTime}`
+            );
+
+            // Mark the timer as "completed" in the database
+            await updateTimerStatus(timerId, "completed");
+          } catch (error) {
+            console.error("Error triggering webhook:", error);
+          }
+        }, timeLeftInMilliseconds);
+      }
     }
-  }, totalTimeInMilliseconds);
+  } catch (error) {
+    console.error("Error scheduling timers:", error);
+  }
 }
 
 // Create a validation function
@@ -146,14 +177,15 @@ function validateInput(hours, minutes, seconds, url) {
   return true;
 }
 
-// Function to mark a timer as completed
-async function markTimerAsCompleted(timerId) {
+// Function to update the status of a timer in the database
+async function updateTimerStatus(timerId, status) {
   try {
-    await pool.query("UPDATE timers SET status = 'completed' WHERE id = ?", [
+    await pool.query("UPDATE timers SET status = ? WHERE id = ?", [
+      status,
       timerId,
     ]);
   } catch (error) {
-    console.error("Error marking timer as completed:", error);
+    console.error("Error updating timer status:", error);
   }
 }
 
@@ -167,28 +199,17 @@ async function checkAndTriggerExpiredTimers() {
 
     if (Array.isArray(result) && result.length > 0) {
       for (const timer of result) {
-        const { id, url } = timer;
+        const { id: timerId, url } = timer;
 
         // Trigger the webhook by making a POST request to the URL with the timer ID appended
-        await axios.post(`${url}/${id}`);
+        await axios.post(`${url}/${timerId}`);
 
         // Mark the timer as "completed" in the database
-        await markTimerAsCompleted(id);
+        await updateTimerStatus(timerId, "completed");
       }
     }
   } catch (error) {
     console.error("Error checking and triggering expired timers:", error);
-  }
-}
-
-// Function to mark a timer as completed
-async function markTimerAsCompleted(timerId) {
-  try {
-    await pool.query("UPDATE timers SET status = 'completed' WHERE id = ?", [
-      timerId,
-    ]);
-  } catch (error) {
-    console.error("Error marking timer as completed:", error);
   }
 }
 
@@ -210,5 +231,6 @@ async function cleanupCompletedTimers() {
 module.exports = { createTimer, getTimerStatus };
 
 // Schedule recurring tasks
+setInterval(scheduleTimersInBatches, BATCH_INTERVAL);
 setInterval(checkAndTriggerExpiredTimers, TIMER_CHECK_INTERVAL);
 setInterval(cleanupCompletedTimers, CLEANUP_INTERVAL);

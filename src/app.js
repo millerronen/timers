@@ -1,4 +1,5 @@
 require("dotenv").config();
+require("../utility/memoryUsageMonitor");
 const express = require("express");
 const morgan = require("morgan");
 const fs = require("fs");
