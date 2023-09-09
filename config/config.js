@@ -15,4 +15,11 @@ module.exports = {
     password: process.env.DB_PASSWORD || "your_db_password",
     databaseName: process.env.DB_NAME || "timersdb",
   },
+
+  // Redis settings
+  redis: {
+    host: process.env.REDIS_HOST || "localhost", // Redis server host
+    port: process.env.REDIS_PORT || 6379, // Redis server port
+    password: process.env.REDIS_PASSWORD || "", // Redis server password (if set)
+  },
 };

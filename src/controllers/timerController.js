@@ -1,5 +1,8 @@
 const axios = require("axios");
 const pool = require("../database/db");
+const { redisClient, redisSet, redisDel } = require("../../config/redisConfig");
+
+// Your code here that uses the Redis client and functions
 
 // Constants
 const TIMER_CHECK_INTERVAL = 60 * 1000; // 1 minute
@@ -7,6 +10,7 @@ const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 const RETENTION_DAYS = 30;
 const MAX_ALLOWED_TIME_IN_SECONDS = 30 * 24 * 3600;
 const BATCH_INTERVAL = 1000; // 1 seconds
+const lockExpirationInSeconds = 60; // Define the lock expiration time in seconds, change as needed
 
 // Function to create and schedule a timer
 async function createTimer(req, res) {
@@ -125,36 +129,12 @@ async function scheduleTimersInBatches() {
         const { id: timerId, url, trigger_time, status } = timer;
 
         // Check if the timer is already being processed or completed
-        if (status === "processing" || status === "completed") {
+        if (status === "completed") {
           continue; // Skip this timer
         }
 
-        // Calculate the time left until the timer should fire
-        const timeLeftInMilliseconds = new Date(trigger_time) - currentTime;
-
-        // Update the timer's status to "processing"
-        await updateTimerStatus(timerId, "processing");
-
-        // Schedule the timer to execute after the calculated time left
-        setTimeout(async function fireWebhookAndCleanup() {
-          try {
-            // Get the current time when the webhook is fired
-            const firingTime = new Date();
-
-            // Trigger the webhook by making a POST request to the URL with the timer ID appended
-            await axios.post(`${url}/${timerId}`);
-
-            // Log the firing time
-            console.log(
-              `Webhook fired for timer ID ${timerId} at ${firingTime}`
-            );
-
-            // Mark the timer as "completed" in the database
-            await updateTimerStatus(timerId, "completed");
-          } catch (error) {
-            console.error("Error triggering webhook:", error);
-          }
-        }, timeLeftInMilliseconds);
+        // Execute the timer with distributed locking
+        await executeTimerWithLock(timerId, url);
       }
     }
   } catch (error) {
@@ -226,6 +206,64 @@ async function cleanupCompletedTimers() {
   } catch (error) {
     console.error("Error cleaning up completed timers:", error);
   }
+}
+
+// Function to execute a timer with distributed locking
+async function executeTimerWithLock(timerId, url) {
+  try {
+    // Attempt to acquire a lock for the timer using Redis
+    const lockKey = `timer_lock:${timerId}`;
+    const lockValue = generateLockValue(); // Generate a unique lock value
+
+    const lockAcquired = await redisSet(
+      lockKey,
+      lockValue,
+      "NX",
+      "EX",
+      lockExpirationInSeconds
+    );
+
+    if (lockAcquired === "OK") {
+      // The lock was acquired, so we can proceed to execute the timer
+
+      // Get the current time when the timer is executed
+      const executionTime = new Date();
+
+      // Trigger the webhook by making a POST request to the URL with the timer ID appended
+      await axios.post(`${url}/${timerId}`);
+
+      // Log the execution time
+      console.log(`Timer ID ${timerId} executed at ${executionTime}`);
+
+      // Mark the timer as "completed" in the database
+      await updateTimerStatus(timerId, "completed");
+
+      // Release the lock
+      await releaseLock(timerId);
+    } else {
+      // The lock could not be acquired, indicating that another instance is already processing this timer
+      console.log(
+        `Timer ID ${timerId} is already being processed by another instance.`
+      );
+    }
+  } catch (error) {
+    console.error(`Error executing timer ID ${timerId}:`, error);
+  }
+}
+
+async function releaseLock(timerId) {
+  try {
+    // Release the lock by deleting the lock key in Redis
+    const lockKey = `timer_lock:${timerId}`;
+    await redisDel(lockKey);
+  } catch (error) {
+    console.error(`Error releasing lock for timer ID ${timerId}:`, error);
+  }
+}
+
+// Generate a unique lock value (you can use a UUID library or another method)
+function generateLockValue() {
+  return Math.random().toString(36).substring(2); // Example: Generates a random string
 }
 
 module.exports = { createTimer, getTimerStatus };
