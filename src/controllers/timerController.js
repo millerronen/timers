@@ -1,8 +1,7 @@
 const axios = require("axios");
 const pool = require("../database/db");
-const { redisClient, redisSet, redisDel } = require("../../config/redisConfig");
 
-// Your code here that uses the Redis client and functions
+const { redisClient } = require("../../config/redisConfig");
 
 // Constants
 const MAX_PENDING_TIMERS = 100;
@@ -11,7 +10,7 @@ const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 const RETENTION_DAYS = 30;
 const MAX_ALLOWED_TIME_IN_SECONDS = 30 * 24 * 3600;
 const BATCH_INTERVAL = 1000; // 1 seconds
-const lockExpirationInSeconds = 60; // Define the lock expiration time in seconds, change as needed
+const processingInterval = 1000; // 1 second
 
 // Function to create and schedule a timer
 async function createTimer(req, res) {
@@ -106,29 +105,50 @@ async function getTimerStatus(req, res) {
   }
 }
 
-// Function to periodically schedule timers in batches
 async function scheduleTimersInBatches() {
   try {
-    // Calculate the time window for timers to be scheduled (e.g., next 10 seconds)
-    const currentTime = new Date();
-    const endTime = new Date(currentTime.getTime() + BATCH_INTERVAL);
-
-    // Retrieve timers with status "pending" and trigger time within the time window
-    const [result] = await pool.query(
-      "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= ? AND trigger_time >= NOW() LIMIT ?",
-      [endTime, MAX_PENDING_TIMERS]
-    );
+    const result = await fetchTimersToEnqueue();
 
     if (Array.isArray(result) && result.length > 0) {
-      for (const timer of result) {
-        const { id: timerId, url, trigger_time, status } = timer;
+      // Create an array of promises to enqueue each timer
+      const enqueuePromises = result.map((timer) =>
+        enqueueTimersInRedis(timer)
+      );
 
-        await executeTimerWithLock(timerId, url);
-      }
+      // Use Promise.all to enqueue all timers concurrently
+      await Promise.all(enqueuePromises);
     }
   } catch (error) {
     console.error("Error scheduling timers:", error);
   }
+}
+
+async function fetchTimersToEnqueue() {
+  const currentTime = new Date();
+  const endTime = new Date(currentTime.getTime() + BATCH_INTERVAL);
+
+  // Retrieve timers with status "pending" and trigger time within the time window
+  const [result] = await pool.query(
+    "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= ? AND trigger_time >= NOW() LIMIT ?",
+    [endTime, MAX_PENDING_TIMERS]
+  );
+
+  return result;
+}
+
+async function enqueueTimersInRedis(timer) {
+  const redisKey = "pending_timers";
+  const { id: timerId, url, trigger_time, status } = timer;
+  const timerData = {
+    id: timerId,
+    url,
+  };
+
+  // Calculate the score (trigger time) for the timer
+  const triggerTime = new Date(trigger_time).getTime();
+
+  // Enqueue the timer in Redis Sorted Set
+  await redisClient.zadd(redisKey, triggerTime, JSON.stringify(timerData));
 }
 
 // Create a validation function
@@ -167,14 +187,61 @@ async function checkAndTriggerExpiredTimers() {
     );
 
     if (Array.isArray(result) && result.length > 0) {
-      for (const timer of result) {
-        const { id: timerId, url } = timer;
+      // Create an array of promises to enqueue each timer
+      const enqueuePromises = result.map((timer) =>
+        enqueueTimersInRedis(timer)
+      );
 
-        await executeTimerWithLock(timerId, url);
-      }
+      // Use Promise.all to enqueue all timers concurrently
+      await Promise.all(enqueuePromises);
     }
   } catch (error) {
     console.error("Error checking and triggering expired timers:", error);
+  }
+}
+
+// Function to process timers from Redis Sorted Set
+async function processTimers() {
+  try {
+    // Check if there are timers in the Redis Sorted Set
+    const isPendingTimersEmpty =
+      (await redisClient.zcard("pending_timers")) === 0;
+
+    if (!isPendingTimersEmpty) {
+      // Get the current time in milliseconds
+      const currentTime = Date.now();
+
+      // Retrieve timers with scores (trigger times) less than or equal to the current time
+      const timers = await redisClient.zrangebyscore(
+        "pending_timers",
+        "-inf",
+        currentTime
+      );
+
+      for (const timer of timers) {
+        const timerData = JSON.parse(timer);
+        const { id: timerId, url } = timerData;
+
+        // Mark the timer as "completed" in the database
+        await updateTimerStatus(timerId, "completed");
+
+        // Remove the timer from Redis Sorted Set
+        await redisClient.zrem("pending_timers", timer);
+
+        // Process the timer
+        await axios.post(`${url}/${timerId}`);
+
+        // Get the current time when the timer is executed
+        const executionTime = new Date();
+
+        // Log the execution time
+        console.log(`Timer ID ${timerId} executed at ${executionTime}`);
+      }
+    }
+  } catch (error) {
+    console.error("Error processing timers:", error);
+    // Mark the timer as "completed" in the database
+    await updateTimerStatus(timerId, "failed");
   }
 }
 
@@ -193,67 +260,10 @@ async function cleanupCompletedTimers() {
   }
 }
 
-// Function to execute a timer with distributed locking
-async function executeTimerWithLock(timerId, url) {
-  try {
-    // Attempt to acquire a lock for the timer using Redis
-    const lockKey = `timer_lock:${timerId}`;
-    const lockValue = generateLockValue(); // Generate a unique lock value
-
-    const lockAcquired = await redisSet(
-      lockKey,
-      lockValue,
-      "NX",
-      "EX",
-      lockExpirationInSeconds
-    );
-
-    if (lockAcquired === "OK") {
-      // The lock was acquired, so we can proceed to execute the timer
-
-      // Mark the timer as "completed" in the database
-      await updateTimerStatus(timerId, "completed");
-
-      // Trigger the webhook by making a POST request to the URL with the timer ID appended
-      await axios.post(`${url}/${timerId}`);
-
-      // Get the current time when the timer is executed
-      const executionTime = new Date();
-
-      // Log the execution time
-      console.log(`Timer ID ${timerId} executed at ${executionTime}`);
-
-      // Release the lock
-      await releaseLock(timerId);
-    } else {
-      // The lock could not be acquired, indicating that another instance is already processing this timer
-      console.log(
-        `Timer ID ${timerId} is already being processed by another instance.`
-      );
-    }
-  } catch (error) {
-    console.error(`Error executing timer ID ${timerId}:`, error);
-  }
-}
-
-async function releaseLock(timerId) {
-  try {
-    // Release the lock by deleting the lock key in Redis
-    const lockKey = `timer_lock:${timerId}`;
-    await redisDel(lockKey);
-  } catch (error) {
-    console.error(`Error releasing lock for timer ID ${timerId}:`, error);
-  }
-}
-
-// Generate a unique lock value (you can use a UUID library or another method)
-function generateLockValue() {
-  return Math.random().toString(36).substring(2); // Example: Generates a random string
-}
-
 module.exports = { createTimer, getTimerStatus };
 
 // Schedule recurring tasks
 setInterval(scheduleTimersInBatches, BATCH_INTERVAL);
 setInterval(checkAndTriggerExpiredTimers, TIMER_CHECK_INTERVAL);
 setInterval(cleanupCompletedTimers, CLEANUP_INTERVAL);
+setInterval(processTimers, processingInterval);
