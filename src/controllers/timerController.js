@@ -102,8 +102,6 @@ async function getTimerStatus(req, res) {
   } catch (error) {
     console.error("Error getting timer status:", error);
     res.status(500).json({ error: "Internal Server Error" });
-  } finally {
-    connection.release(); // Release the connection back to the pool
   }
 }
 
