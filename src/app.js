@@ -26,6 +26,11 @@ app.use(bodyParser.json());
 app.use("/timers", rateLimiter); // Attach rate limiter middleware
 app.use("/", timerRoutes); // Define a base path for my routes
 
+// Add a "ping" endpoint
+app.get("/ping", (_req, res) => {
+  res.send("Hello from timer service");
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
