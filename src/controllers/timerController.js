@@ -35,6 +35,8 @@ async function createTimer(req, res) {
     creationTime.getTime() + totalTimeInMilliseconds
   );
 
+  const connection = await pool.getConnection();
+
   try {
     // Insert timer data into the database with status "pending"
     const [results] = await connection.query(
