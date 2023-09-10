@@ -46,6 +46,9 @@ The Timer Service is a Node.js application that allows users to easily execute s
   - [Rate Limiting and Throttling](#rate-limiting-and-throttling)
   - [Disaster Recovery and High Availability](#disaster-recovery-and-high-availability)
   - [Stress Testing](#stress-testing)
+    - [Additional Notes](#additional-notes)
+      - [Retry Logic (Out of scope)](#retry-logic-out-of-scope)
+      - [Message Queueing for Long-Running Tasks (out of scope)](#message-queueing-for-long-running-tasks-out-of-scope)
 
 ## Features
 
@@ -306,3 +309,41 @@ For business continuity, the application is designed with disaster recovery and 
 Regular stress testing is conducted to simulate high-traffic scenarios and identify potential weaknesses in the system. This proactive approach allows for adjustments and improvements before they impact production performance.
 
 By implementing these strategies and optimizations, we are confident in our ability to support a high-traffic production environment, meeting the demands of **100** timer creation requests per second while maintaining system stability and reliability.
+
+Certainly, you can include the information about retry logic in the "Additional Notes" section of your README.md file. Here's a generated section for your README.md:
+
+### Additional Notes
+
+#### Retry Logic (Out of scope)
+
+In cases where the execution of a timer's task, such as the POST webhook request, encounters failures, it's essential to implement retry logic to ensure the task eventually succeeds. Retry logic helps in handling transient errors, network issues, or temporary unavailability of external services.
+
+**Retry Strategies:**
+
+1. **Exponential Backoff:** A common retry strategy is exponential backoff, where retries are attempted with increasing time intervals between them. For example, you might start with a short delay and double the delay duration with each subsequent retry.
+
+2. **Retry Limits:** Set a maximum number of retry attempts to prevent endless retry loops in case of persistent issues. Once the maximum retry limit is reached, the system can take appropriate action, such as logging the failure or marking the timer as "failed."
+
+**Handling Permanent Failures:**
+
+While retry logic is crucial for transient issues, it's also essential to distinguish between transient and permanent failures. If a task repeatedly fails and retries are unsuccessful, consider marking the timer as "failed" and logging the error details for further investigation. This prevents endless retrying of tasks that are unlikely to succeed.
+
+**Monitoring and Alerts:**
+
+Monitoring and alerting mechanisms to keep track of task execution and retries - to notify administrators or developers when a task repeatedly fails beyond a certain threshold, enabling timely intervention.
+
+**Resilient Webhooks:**
+
+When dealing with webhooks, ensure that the external service receiving the webhook can handle retries gracefully. Many webhook consumers expect idempotent requests, meaning the same request can be safely repeated without unintended side effects.
+
+#### Message Queueing for Long-Running Tasks (out of scope)
+
+For tasks that have the potential to be long-running or resource-intensive, I considered implementing a message queuing mechanism. Message queues provide a way to offload and process tasks asynchronously, ensuring efficient resource utilization and scalability (also could have helped with the one time only timer triggering)
+
+Key Benefits of Message Queues are: Scalability and Reliability.
+
+Long-Running Tasks: Message queues are particularly useful for tasks that may take a significant amount of time to complete. They allow the timer service to continue processing other tasks while long-running tasks are handled separately.
+
+Retry Mechanism: Message queues often include built-in retry mechanisms, allowing failed tasks to be retried automatically.
+
+By documenting and implementing retry logic and message queuing, we enhance the resilience and reliability of the timer service, ensuring that tasks are eventually completed even in the face of occasional failures.
