@@ -35,9 +35,6 @@ async function createTimer(req, res) {
     creationTime.getTime() + totalTimeInMilliseconds
   );
 
-  const connection = await pool.getConnection();
-  await connection.beginTransaction();
-
   try {
     // Insert timer data into the database with status "pending"
     const [results] = await connection.query(
@@ -47,16 +44,12 @@ async function createTimer(req, res) {
 
     const timerId = results.insertId;
 
-    // Commit the transaction
-    await connection.commit();
-
     // Respond with the timer ID and time left
     res.json({
       id: timerId,
       time_left: totalTimeInSeconds,
     });
   } catch (error) {
-    await connection.rollback(); // Rollback the transaction on error
     console.error("Error creating timer:", error);
     res.status(500).json({ error: "Internal Server Error" });
   } finally {
@@ -107,6 +100,8 @@ async function getTimerStatus(req, res) {
   } catch (error) {
     console.error("Error getting timer status:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    connection.release(); // Release the connection back to the pool
   }
 }
 
