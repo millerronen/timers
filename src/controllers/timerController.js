@@ -5,6 +5,7 @@ const { redisClient, redisSet, redisDel } = require("../../config/redisConfig");
 // Your code here that uses the Redis client and functions
 
 // Constants
+const MAX_PENDING_TIMERS = 100;
 const TIMER_CHECK_INTERVAL = 60 * 1000; // 1 minute
 const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 const RETENTION_DAYS = 30;
@@ -114,8 +115,8 @@ async function scheduleTimersInBatches() {
 
     // Retrieve timers with status "pending" and trigger time within the time window
     const [result] = await pool.query(
-      "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= ? AND trigger_time >= NOW()",
-      [endTime]
+      "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= ? AND trigger_time >= NOW() LIMIT ?",
+      [endTime, MAX_PENDING_TIMERS]
     );
 
     if (Array.isArray(result) && result.length > 0) {
