@@ -122,11 +122,6 @@ async function scheduleTimersInBatches() {
       for (const timer of result) {
         const { id: timerId, url, trigger_time, status } = timer;
 
-        // Check if the timer is already being processed or completed
-        if (status === "completed") {
-          continue; // Skip this timer
-        }
-
         await executeTimerWithLock(timerId, url);
       }
     }
