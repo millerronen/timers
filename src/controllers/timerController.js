@@ -133,7 +133,6 @@ async function scheduleTimersInBatches() {
           continue; // Skip this timer
         }
 
-        // Execute the timer with distributed locking
         await executeTimerWithLock(timerId, url);
       }
     }
@@ -181,11 +180,7 @@ async function checkAndTriggerExpiredTimers() {
       for (const timer of result) {
         const { id: timerId, url } = timer;
 
-        // Trigger the webhook by making a POST request to the URL with the timer ID appended
-        await axios.post(`${url}/${timerId}`);
-
-        // Mark the timer as "completed" in the database
-        await updateTimerStatus(timerId, "completed");
+        await executeTimerWithLock(timerId, url);
       }
     }
   } catch (error) {
