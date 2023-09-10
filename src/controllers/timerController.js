@@ -25,8 +25,7 @@ async function createTimer(req, res) {
   const totalTimeInSeconds = hours * 3600 + minutes * 60 + seconds;
 
   // Calculate the total time in milliseconds
-  const totalTimeInMilliseconds =
-    hours * 3600000 + minutes * 60000 + seconds * 1000;
+  const totalTimeInMilliseconds = totalTimeInSeconds * 1000;
 
   // Get the current time when the timer is created
   const creationTime = new Date();
