@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const bodyParser = require("body-parser");
 const timerRoutes = require("./routes/timerRoutes");
+const rateLimiter = require("./middlewares/rateLimiter");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,6 +23,7 @@ const customFormat = "[:date[clf]] :method :url :status :response-time ms"; // D
 app.use(morgan(customFormat, { stream: logStream }));
 
 app.use(bodyParser.json());
+app.use("/timers", rateLimiter); // Attach rate limiter middleware
 app.use("/", timerRoutes); // Define a base path for my routes
 
 app.listen(port, () => {
