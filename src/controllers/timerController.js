@@ -221,17 +221,17 @@ async function executeTimerWithLock(timerId, url) {
     if (lockAcquired === "OK") {
       // The lock was acquired, so we can proceed to execute the timer
 
-      // Get the current time when the timer is executed
-      const executionTime = new Date();
+      // Mark the timer as "completed" in the database
+      await updateTimerStatus(timerId, "completed");
 
       // Trigger the webhook by making a POST request to the URL with the timer ID appended
       await axios.post(`${url}/${timerId}`);
 
+      // Get the current time when the timer is executed
+      const executionTime = new Date();
+
       // Log the execution time
       console.log(`Timer ID ${timerId} executed at ${executionTime}`);
-
-      // Mark the timer as "completed" in the database
-      await updateTimerStatus(timerId, "completed");
 
       // Release the lock
       await releaseLock(timerId);
