@@ -20,6 +20,15 @@ services:
     networks:
       - internalnet
 
+  redis:
+    image: redis:latest
+    container_name: rediscontainer
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    networks:
+      - internalnet
+
 networks:
   internalnet:
     driver: bridge
