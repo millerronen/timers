@@ -6,7 +6,7 @@ const stream = pretty({
   ignore: "pid,hostname",
   timestamp: false,
   customPrettifiers: {
-    time: () => `${new Date().toISOString()}`,
+    time: () => `[${new Date().toISOString()}]`,
   },
 });
 const log = pino({ level: "info" }, stream);
