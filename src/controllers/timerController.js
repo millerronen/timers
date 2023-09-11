@@ -218,25 +218,28 @@ async function processTimers() {
         currentTime
       );
 
-      for (const timer of timers) {
-        const timerData = JSON.parse(timer);
-        const { id: timerId, url } = timerData;
+      // Process timers concurrently using Promise.all
+      await Promise.all(
+        timers.map(async (timer) => {
+          const timerData = JSON.parse(timer);
+          const { id: timerId, url } = timerData;
 
-        // Mark the timer as "completed" in the database
-        await updateTimerStatus(timerId, "completed");
+          // Mark the timer as "completed" in the database
+          await updateTimerStatus(timerId, "completed");
 
-        // Remove the timer from Redis Sorted Set
-        await redisClient.zrem("pending_timers", timer);
+          // Remove the timer from Redis Sorted Set
+          await redisClient.zrem("pending_timers", timer);
 
-        // Process the timer
-        await axios.post(`${url}/${timerId}`);
+          // Process the timer
+          await axios.post(`${url}/${timerId}`);
 
-        // Get the current time when the timer is executed
-        const executionTime = new Date();
+          // Get the current time when the timer is executed
+          const executionTime = new Date();
 
-        // Log the execution time
-        console.log(`Timer ID ${timerId} executed at ${executionTime}`);
-      }
+          // Log the execution time
+          console.log(`Timer ID ${timerId} executed at ${executionTime}`);
+        })
+      );
     }
   } catch (error) {
     console.error("Error processing timers:", error);
