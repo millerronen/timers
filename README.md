@@ -17,7 +17,7 @@ The Timer Service is a Node.js application that allows users to easily execute s
   - [Database Schema and Setup](#database-schema-and-setup)
     - [Table: timers](#table-timers)
     - [Below is a breakdown of the table schema:](#below-is-a-breakdown-of-the-table-schema)
-  - [Creating the Timers Table](#creating-the-timers-table)
+  - [Creating the Timers DB and Timers Table](#creating-the-timers-db-and-timers-table)
   - [Connection Pool](#connection-pool)
   - [Additional Requirements](#additional-requirements)
     - [Handling Invalid Inputs](#handling-invalid-inputs)
@@ -120,10 +120,9 @@ The Timer Service is built using Node.js and relies on the following technologie
 
 - Node.js: The core runtime for executing JavaScript on the server.
 - MySQL: A relational database for storing timer data.
-- Redis: In-memory data store for distributed locking and efficient timer scheduling.
+- Redis: In-memory data store for message queue processing.
 - Express.js: A web application framework for handling HTTP requests.
 - Axios: A promise-based HTTP client for making webhook requests.
-- Distributed Locking: Prevents multiple instances from executing the same timer simultaneously.
 
 ## Database Schema and Setup
 
@@ -134,16 +133,16 @@ The timers table is responsible for storing timer information.
 
 **Table: timers**
 
-| Field        | Type                                       | Null | Key | Default           | Extra             |
-| ------------ | ------------------------------------------ | ---- | --- | ----------------- | ----------------- |
-| id           | int                                        | NO   | PRI | NULL              | auto_increment    |
-| hours        | int                                        | YES  |     | NULL              |                   |
-| minutes      | int                                        | YES  |     | NULL              |                   |
-| seconds      | int                                        | YES  |     | NULL              |                   |
-| url          | varchar(255)                               | YES  |     | NULL              |                   |
-| start_time   | timestamp                                  | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
-| trigger_time | timestamp                                  | YES  |     | NULL              |                   |
-| status       | enum('pending', 'processing', 'completed') | YES  | MUL | pending           |                   |
+| Field        | Type                                        | Null | Key | Default           | Extra             |
+| ------------ | ------------------------------------------- | ---- | --- | ----------------- | ----------------- |
+| id           | int                                         | NO   | PRI | NULL              | auto_increment    |
+| hours        | int                                         | YES  |     | NULL              |                   |
+| minutes      | int                                         | YES  |     | NULL              |                   |
+| seconds      | int                                         | YES  |     | NULL              |                   |
+| url          | varchar(255)                                | YES  |     | NULL              |                   |
+| start_time   | timestamp                                   | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
+| trigger_time | timestamp                                   | YES  |     | NULL              |                   |
+| status       | enum('pending', 'proc.', 'comp.', 'failed') | YES  | MUL | pending           |                   |
 
 ### Below is a breakdown of the table schema:
 
@@ -154,13 +153,15 @@ The timers table is responsible for storing timer information.
 - url (VARCHAR(255)): An optional URL associated with the timer.
 - start_time (TIMESTAMP DEFAULT CURRENT_TIMESTAMP): The timestamp when the timer was created.
 - trigger_time (TIMESTAMP): The timestamp when the timer is scheduled to trigger.
-- status (ENUM('pending', 'completed') DEFAULT 'pending'): The status of the timer, which can be 'pending' or 'completed'.
-- INDEX idx_status_trigger_time (status, trigger_time): An index that can be used to optimize queries involving timer status and trigger time.
+- status (ENUM('pending','processing','completed','failed') DEFAULT 'pending'): The status of the timer,
+  which can be 'pending', or 'processing' or 'completed' or 'failed'.
+- INDEX idx_status_trigger_time (status, trigger_time): An index that can be used to optimize queries involving
+  timer status and trigger time.
 
-## Creating the Timers Table
+## Creating the Timers DB and Timers Table
 
-The createTimersTableIfNotExists function in my code is responsible for creating the timers table if it doesn't already exist.
-It ensures that the table is set up correctly during application startup.
+The createDatabaseIfNotExists and createTimersTableIfNotExists functions in my code is responsible for creating the timers db and table if it doesn't already exist.
+It ensures that the db and its table is set up correctly during application startup.
 
 ## Connection Pool
 
@@ -175,7 +176,7 @@ const pool = mysql.createPool({
   password: config.database.password,
   database: config.database.databaseName,
   waitForConnections: true,
-  connectionLimit: 10, // Adjust this based on your needs
+  connectionLimit: 10,
   queueLimit: 0,
 });
 

@@ -11,7 +11,7 @@ const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 const RETENTION_DAYS = 30;
 const MAX_ALLOWED_TIME_IN_SECONDS = 30 * 24 * 3600;
 const BATCH_INTERVAL = 1000; // 1 seconds
-const processingInterval = 1000; // 1 second
+const PROCESSING_INTERVAL = 1000; // 1 second
 
 // Function to create and schedule a timer
 async function createTimer(req, res) {
@@ -190,9 +190,10 @@ async function checkAndTriggerExpiredTimers() {
 
     if (Array.isArray(result) && result.length > 0) {
       // Create an array of promises to enqueue each timer
-      const enqueuePromises = result.map((timer) =>
-        enqueueTimersInRedis(timer)
-      );
+      const enqueuePromises = result.map((timer) => {
+        enqueueTimersInRedis(timer);
+        updateTimerStatus(timer.id, "processing");
+      });
 
       // Use Promise.all to enqueue all timers concurrently
       await Promise.all(enqueuePromises);
@@ -272,4 +273,4 @@ module.exports = { createTimer, getTimerStatus };
 setInterval(scheduleTimersInBatches, BATCH_INTERVAL);
 setInterval(checkAndTriggerExpiredTimers, TIMER_CHECK_INTERVAL);
 setInterval(cleanupCompletedTimers, CLEANUP_INTERVAL);
-setInterval(processTimers, processingInterval);
+setInterval(processTimers, PROCESSING_INTERVAL);
