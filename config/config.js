@@ -14,6 +14,8 @@ module.exports = {
     user: process.env.DB_USER || "your_db_user",
     password: process.env.DB_PASSWORD || "your_db_password",
     databaseName: process.env.DB_NAME || "timersdb",
+    connectionLimit: process.env.DB_CONNECTION_LIMIT || 10,
+    queueLimit: process.env.DB_QUEUE_LIMIT || 0,
   },
 
   // Redis settings

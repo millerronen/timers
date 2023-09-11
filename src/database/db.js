@@ -1,7 +1,25 @@
 const mysql = require("mysql2/promise");
 const config = require("../../config/config");
 
-// Function to create the timers table if it doesn't exist
+async function createDatabaseIfNotExists() {
+  try {
+    const connection = await mysql.createConnection({
+      host: config.database.host,
+      port: config.database.port,
+      user: config.database.user,
+      password: config.database.password,
+    });
+
+    await connection.query(
+      `CREATE DATABASE IF NOT EXISTS ${config.database.databaseName}`
+    );
+    console.log("Database has been created or already exists.");
+    connection.end();
+  } catch (error) {
+    console.error("Error creating database:", error);
+  }
+}
+
 async function createTimersTableIfNotExists() {
   try {
     const connection = await mysql.createConnection({
@@ -14,7 +32,7 @@ async function createTimersTableIfNotExists() {
 
     await connection.query(`
   CREATE TABLE IF NOT EXISTS timers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     hours INT,
     minutes INT,
     seconds INT,
@@ -32,7 +50,7 @@ async function createTimersTableIfNotExists() {
   }
 }
 
-// Call the function to create the table during application startup
+createDatabaseIfNotExists();
 createTimersTableIfNotExists();
 
 // Create a connection pool
@@ -42,9 +60,8 @@ const pool = mysql.createPool({
   user: config.database.user,
   password: config.database.password,
   database: config.database.databaseName,
-  waitForConnections: true,
-  connectionLimit: 10, // Adjust this based on your needs
-  queueLimit: 0,
+  connectionLimit: config.database.connectionLimit,
+  queueLimit: config.database.queueLimit,
 });
 
 module.exports = pool;
