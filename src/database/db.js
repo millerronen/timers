@@ -48,7 +48,7 @@ async function createTimersTableIfNotExists() {
 
     logger.info("Timers table has been created or already exists.");
   } catch (error) {
-    logger.error(`Error creating timers table: ${error}");
+    logger.error(`Error creating timers table: ${error}`);
     process.exit(1);
   }
 }
