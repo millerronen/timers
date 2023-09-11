@@ -17,7 +17,7 @@ async function createDatabaseIfNotExists() {
     logger.info("Database has been created or already exists.");
     connection.end();
   } catch (error) {
-    logger.error("Error creating database:", error);
+    logger.error(`Error creating database:, ${error}`);
     process.exit(1);
   }
 }
@@ -48,9 +48,8 @@ async function createTimersTableIfNotExists() {
 
     logger.info("Timers table has been created or already exists.");
   } catch (error) {
-    logger.error("Error creating timers table:", error);
+    logger.error(`Error creating timers table: ${error}");
     process.exit(1);
-  }
   }
 }
 
