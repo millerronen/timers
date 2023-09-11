@@ -30,12 +30,12 @@ function checkMemoryUsage() {
   // Write the memory information to the log file using the stream
   logStream.write(memoryInfo, (err) => {
     if (err) {
-      console.error(`Error writing to file: ${err}`);
+      log.error(`Error writing to file: ${err}`);
     }
   });
 
   if (memoryInMB > MEMORY_LIMIT_MB) {
-    console.error("Memory usage exceeds the limit. Taking action...");
+    log.error("Memory usage exceeds the limit. Taking action...");
     // TODO: Implement some action here, such as restarting the application or sending an alert.
   }
 }

@@ -53,7 +53,7 @@ async function createTimer(req, res) {
       time_left: totalTimeInSeconds,
     });
   } catch (error) {
-    console.error("Error creating timer:", error);
+    logger.error("Error creating timer:", error);
     res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release(); // Release the connection back to the pool
@@ -101,7 +101,7 @@ async function getTimerStatus(req, res) {
       res.json({ id: timerId, time_left: timeLeftInSeconds });
     }
   } catch (error) {
-    console.error("Error getting timer status:", error);
+    logger.error("Error getting timer status:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 }
@@ -121,7 +121,7 @@ async function scheduleTimersInBatches() {
       await Promise.all(enqueuePromises);
     }
   } catch (error) {
-    console.error("Error scheduling timers:", error);
+    log.error("Error scheduling timers:", error);
   }
 }
 
@@ -176,7 +176,7 @@ async function updateTimerStatus(timerId, status) {
       timerId,
     ]);
   } catch (error) {
-    console.error("Error updating timer status:", error);
+    log.error("Error updating timer status:", error);
   }
 }
 
@@ -198,7 +198,7 @@ async function checkAndTriggerExpiredTimers() {
       await Promise.all(enqueuePromises);
     }
   } catch (error) {
-    console.error("Error checking and triggering expired timers:", error);
+    log.error("Error checking and triggering expired timers:", error);
   }
 }
 
