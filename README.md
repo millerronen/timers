@@ -7,8 +7,7 @@ The Timer Service is a Node.js application that allows users to easily execute s
 - [Timer Service](#timer-service)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
-  - [Installation](#installation)
-    - [Environment Variables](#environment-variables)
+  - [Installation (Dockerized)](#installation-dockerized)
   - [Usage](#usage)
     - [Creating a Timer](#creating-a-timer)
   - [Checking Timer Status](#checking-timer-status)
@@ -59,35 +58,20 @@ The Timer Service is a Node.js application that allows users to easily execute s
 - Distributed locking to prevent timer execution conflicts.
 - Integration with external services through webhooks.
 
-## Installation
+## Installation (Dockerized)
 
 To run the Timer Service locally or on a server, follow these steps:
 
-1. Clone this repository: `git clone https://github.com/millerronen/timers.git`
-2. Navigate to the project directory: `cd timer-service`
-3. Install dependencies: `npm install`
-4. Configure environment variables by creating a `.env` file (see [Environment Variables](#environment-variables)).
-5. Start the application: `npm start`
-
-### Environment Variables
-
-To configure the Timer Service, set the following environment variables in your `.env` file:
-
-- `PORT`: Port on which the service will run.
-- `DB_HOST`: MySQL database host.
-- `DB_PORT`: MySQL database port.
-- `DB_USER`: MySQL database username.
-- `DB_PASSWORD`: MySQL database password.
-- `DB_NAME`: MySQL database name.
-- `REDIS_HOST`: Redis server host.
-- `REDIS_PORT`: Redis server port.
-- `REDIS_PASSWORD`: Redis server password.
+1. Open the downloaded zip file (or clone this repository: `git clone https://github.com/millerronen/timers.git)`
+2. Navigate to the project directory: `cd timers`
+3. Run the command: `docker-compose up -d --build` (docker should be installed on your machine).
+4. Server should be running on localhost:3000 (You can check health by browsing: [localhost:3000/ping)](http://localhost:3000/ping)
 
 ## Usage
 
 ### Creating a Timer
 
-To create a timer, send a POST request to the `/timers` endpoint with the following JSON body:
+To create a timer, send a **POST** request to the `/timers` endpoint with the following JSON body:
 
 ```json
 {
@@ -112,7 +96,7 @@ This response indicates that the timer with ID 1 has 5400 seconds (1 hour and 30
 
 ## Checking Timer Status
 
-You can check the status of a timer by sending a GET request to the /timers/:id endpoint, where :id is the ID of the timer you want to check. The service will respond with a JSON object containing the timer ID and the time left until execution:
+You can check the status of a timer by sending a **GET** request to the `/timers/:id` endpoint, where :id is the ID of the timer you want to check. The service will respond with a JSON object containing the timer ID and the time left until execution:
 
 ```json
 {
@@ -321,7 +305,6 @@ In cases where the execution of a timer's task, such as the POST webhook request
 **Retry Strategies:**
 
 1. **Exponential Backoff:** A common retry strategy is exponential backoff, where retries are attempted with increasing time intervals between them. For example, you might start with a short delay and double the delay duration with each subsequent retry.
-
 2. **Retry Limits:** Set a maximum number of retry attempts to prevent endless retry loops in case of persistent issues. Once the maximum retry limit is reached, the system can take appropriate action, such as logging the failure or marking the timer as "failed."
 
 **Handling Permanent Failures:**
