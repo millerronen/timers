@@ -29,6 +29,31 @@ services:
     networks:
       - internalnet
 
+  nodeapp:
+    depends_on:
+      - mysqldb
+      - redis
+    container_name: mynodeappcontainer
+    build: .
+    image: nodeapp:v1
+    ports:
+      - 3000:3000
+    expose:
+      - 3000
+    environment:
+      PORT: 3000
+      DB_HOST: mysqldb
+      DB_PORT: 3306
+      DB_USER: "admin"
+      DB_PASSWORD: "letmein"
+      DB_NAME: timersdb
+      DB_CONNECTION_LIMIT: 100
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD:
+    networks:
+      - internalnet
+
 networks:
   internalnet:
     driver: bridge
