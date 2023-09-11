@@ -7,7 +7,7 @@ const path = require("path");
 const bodyParser = require("body-parser");
 const timerRoutes = require("./routes/timerRoutes");
 const rateLimiter = require("./middlewares/rateLimiter");
-const log = require("../utility/logger");
+const logger = require("../utility/logger");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -33,5 +33,5 @@ app.get("/ping", (_req, res) => {
 });
 
 app.listen(port, () => {
-  log.info(`Server is running on port ${port}`);
+  logger.info(`Server is running on port ${port}`);
 });

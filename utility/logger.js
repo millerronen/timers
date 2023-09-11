@@ -9,6 +9,6 @@ const stream = pretty({
     time: () => `[${new Date().toISOString()}]`,
   },
 });
-const log = pino({ level: "info" }, stream);
+const loggger = pino({ level: "info" }, stream);
 
-module.exports = log;
+module.exports = loggger;
