@@ -1,5 +1,6 @@
 const axios = require("axios");
 const pool = require("../database/db");
+const log = require("../../utility/logger");
 
 const { redisClient } = require("../../config/redisConfig");
 
@@ -238,12 +239,14 @@ async function processTimers() {
           const executionTime = new Date();
 
           // Log the execution time
-          console.log(`Timer ID ${timerId} executed at ${executionTime}`);
+          log.info(
+            `Timer ID ${timerId} executed at ${executionTime.toISOString()}`
+          );
         })
       );
     }
   } catch (error) {
-    console.error("Error processing timers:", error);
+    log.error("Error processing timers:", error);
     await updateTimerStatus(timerId, "failed"); // Mark the timer as "failed" in the database
   }
 }
@@ -259,7 +262,7 @@ async function cleanupCompletedTimers() {
       [cutoffDate]
     );
   } catch (error) {
-    console.error("Error cleaning up completed timers:", error);
+    log.error("Error cleaning up completed timers:", error);
   }
 }
 

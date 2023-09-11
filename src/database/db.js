@@ -1,5 +1,6 @@
 const mysql = require("mysql2/promise");
 const config = require("../../config/config");
+const log = require("../../utility/logger");
 
 async function createDatabaseIfNotExists() {
   try {
@@ -13,10 +14,10 @@ async function createDatabaseIfNotExists() {
     await connection.query(
       `CREATE DATABASE IF NOT EXISTS ${config.database.databaseName}`
     );
-    console.log("Database has been created or already exists.");
+    log.info("Database has been created or already exists.");
     connection.end();
   } catch (error) {
-    console.error("Error creating database:", error);
+    log.error("Error creating database:", error);
   }
 }
 
@@ -44,9 +45,9 @@ async function createTimersTableIfNotExists() {
   )
 `);
 
-    console.log("Timers table has been created or already exists.");
+    log.info("Timers table has been created or already exists.");
   } catch (error) {
-    console.error("Error creating timers table:", error);
+    log.error("Error creating timers table:", error);
   }
 }
 
