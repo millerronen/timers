@@ -111,9 +111,10 @@ async function scheduleTimersInBatches() {
 
     if (Array.isArray(result) && result.length > 0) {
       // Create an array of promises to enqueue each timer
-      const enqueuePromises = result.map((timer) =>
-        enqueueTimersInRedis(timer)
-      );
+      const enqueuePromises = result.map((timer) => {
+        updateTimerStatus(timer.id, "processing");
+        enqueueTimersInRedis(timer);
+      });
 
       // Use Promise.all to enqueue all timers concurrently
       await Promise.all(enqueuePromises);
@@ -243,8 +244,7 @@ async function processTimers() {
     }
   } catch (error) {
     console.error("Error processing timers:", error);
-    // Mark the timer as "completed" in the database
-    await updateTimerStatus(timerId, "failed");
+    await updateTimerStatus(timerId, "failed"); // Mark the timer as "failed" in the database
   }
 }
 
