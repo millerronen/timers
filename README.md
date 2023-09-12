@@ -215,21 +215,7 @@ If deployed across multiple servers, a load balancer can be used to evenly distr
 
 ## Ensuring Timers Are Fired Exactly Once
 
-### Distributed Locking:
-
-Before processing the timer, our application uses Redis to acquire a distributed lock.
-This lock ensures that only one server instance can proceed to handle the timer.
-
-### Exclusive Execution:
-
-With the distributed lock in place, only a single server instance can access and process the timer.
-This guarantees that the timer is fired exactly once, regardless of how many server instances are running.
-
-### Lock Release:
-
-After the timer has been processed, the distributed lock is released, allowing other timer events to be processed in the future.
-
-By employing Redis and distributed locking, we ensure that timers are processed in a highly coordinated and reliable manner.
+TODO: Please fill in here.
 
 ## Assumptions:
 
