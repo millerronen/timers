@@ -345,6 +345,8 @@ In such cases, WE might consider using a dedicated message queuing system design
 In a high-traffic and data-intensive application like this, maintaining data consistency between different storage systems is crucial.
 I use both a relational database (MySQL) and Redis for storing and managing timer-related data.
 To ensure that the data remains consistent, when interacting with both storage systems - transactions should be considered.
+For instance, in the producer code, it's essential to maintain consistency in both MySQL and Redis operations by encapsulating them within
+a transaction. Similarly, in the consumer code, I believe it's advisable to encompass the entire process involving MySQL, Redis, and Webhook within a transaction for robustness.
 
 ### Another system design approach that I have considered before this one
 
