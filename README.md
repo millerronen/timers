@@ -15,6 +15,10 @@ The Timer Service is a Node.js application that allows users to easily execute s
   - [High-Level System Design](#high-level-system-design)
   - [Architecture](#architecture)
     - [Application Flow](#application-flow)
+      - [Create Timer Basic Flow](#create-timer-basic-flow)
+      - [Check Expired Timers Flow](#check-expired-timers-flow)
+      - [Get Timer Status Flow](#get-timer-status-flow)
+      - [Cleanup Completed Timers Flow](#cleanup-completed-timers-flow)
   - [Database Schema and Setup](#database-schema-and-setup)
     - [Table: timers](#table-timers)
     - [Below is a breakdown of the table schema:](#below-is-a-breakdown-of-the-table-schema)
@@ -124,11 +128,24 @@ The Timer Service is built using Node.js and relies on the following technologie
 
 ### Application Flow
 
-![Create Timer Basic Flow](./images/CreateTimers.jpg)
-![Create Timer Basic Flow](./images/CreateTimers.jpg)
+#### Create Timer Basic Flow
+
 ![Create Timer Basic Flow](./images/CreateTimers.jpg)
 
-This diagram illustrates the flow of data and processes within our application. It provides an overview of how different components interact and the sequence of actions.
+#### Check Expired Timers Flow
+
+![Check Expired Timers Flow](./images/CheckExpiredTimers.jpg)
+
+#### Get Timer Status Flow
+
+![Get Timer Status Flow](./images/GetTimerStatus.jpg)
+
+#### Cleanup Completed Timers Flow
+
+![Cleanup Completed Timers Flow](./images/CleanupCompletedTimers.jpg)
+
+This diagrams illustrate the flow of the data and processes within the application.
+It provides an overview of how different components interact and the sequence of actions.
 
 ## Database Schema and Setup
 
