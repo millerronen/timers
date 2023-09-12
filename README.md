@@ -45,7 +45,7 @@ The Timer Service is a Node.js application that allows users to easily execute s
       - [Timer Action Retry Logic (NOT IMPLEMENTED)](#timer-action-retry-logic-not-implemented)
       - [Message Queueing for Long-Running Tasks (NOT IMPLEMENTED)](#message-queueing-for-long-running-tasks-not-implemented)
       - [Ensuring Data Consistency with Transactions (NOT IMPLEMENTED)](#ensuring-data-consistency-with-transactions-not-implemented)
-    - [Another system design approaches that I have considered before this one](#another-system-design-approaches-that-i-have-considered-before-this-one)
+    - [Another system design approach that I have considered before this one](#another-system-design-approach-that-i-have-considered-before-this-one)
 
 ## Features
 
@@ -63,6 +63,7 @@ To run the Timer Service locally or on a server, follow these steps:
 2. Navigate to the project directory: `cd timers`
 3. Run the command: `docker-compose up -d --build` (you should have docker installed on your machine).
 4. Server should be running on **localhost:3000** (You can check health by browsing: [localhost:3000/ping)](http://localhost:3000/ping)
+5. To Log in into the MYSQL: mysql -h localhost -P 3306 --protocol=tcp -uroot -pletmein
 
 ## Usage
 
@@ -344,4 +345,14 @@ In a high-traffic and data-intensive application like this, maintaining data con
 I use both a relational database (MySQL) and Redis for storing and managing timer-related data.
 To ensure that the data remains consistent, when interacting with both storage systems - transactions should be considered.
 
-### Another system design approaches that I have considered before this one
+### Another system design approach that I have considered before this one
+
+I was taking into consideration to use the same building blocks but using redis as a distributed locking mechanism instead of
+as a message queue.
+I found out the using it that way (with distributed locking) can cause the system **not** be concurrent as it can by using message queues.
+Of course there are pros and cons for every solution and here is a brief description:
+Choosing Between Locks and Sorted Sets:
+
+- For the simple use case with a limited number of timers and don't require task prioritization or high scalability, Redis locks can be a good choice due to their simplicity.
+
+- For handling a large number of timers, prioritize tasks, ensure scalability, and potentially distribute your system, Redis sorted sets (queues) are a better fit.
