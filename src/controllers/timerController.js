@@ -28,13 +28,14 @@ async function createTimer(req, res) {
   // Calculate the total time in milliseconds
   const totalTimeInMilliseconds = totalTimeInSeconds * 1000;
 
-  // Get the current time when the timer is created
-  const creationTime = new Date();
+  // Get the current time when the timer is created in UTC
+  const creationTime = new Date().toISOString().slice(0, 19).replace("T", " ");
 
-  // Calculate the trigger time
-  const triggerTime = new Date(
-    creationTime.getTime() + totalTimeInMilliseconds
-  );
+  // Calculate the trigger time in UTC
+  const triggerTime = new Date(Date.now() + totalTimeInMilliseconds)
+    .toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
 
   const connection = await pool.getConnection();
 
@@ -126,8 +127,7 @@ async function scheduleTimersInBatches() {
 }
 
 async function fetchTimersToEnqueue() {
-  const currentTime = new Date();
-  const endTime = new Date(currentTime.getTime() + BATCH_INTERVAL);
+  const endTime = new Date(Date.now() + BATCH_INTERVAL).toISOString();
 
   // Retrieve timers with status "pending" and trigger time within the time window
   const [result] = await pool.query(
@@ -185,7 +185,7 @@ async function checkAndTriggerExpiredTimers() {
   try {
     // Retrieve timers with status "pending" and trigger time in the past
     const [result] = await pool.query(
-      "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= NOW()"
+      "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= UTC_TIMESTAMP()"
     );
 
     if (Array.isArray(result) && result.length > 0) {
@@ -262,11 +262,11 @@ async function processTimers() {
 async function cleanupCompletedOrFailedTimers() {
   try {
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
+    cutoffDate.setUTCDate(cutoffDate.getUTCDate() - RETENTION_DAYS);
 
     await pool.query(
       "DELETE FROM timers WHERE (status = 'completed' OR status = 'failed') AND start_time <= ?",
-      [cutoffDate]
+      [cutoffDate.toISOString().slice(0, 19).replace("T", " ")]
     );
   } catch (error) {
     logger.error(`Error cleaning up completed or failed timers: ${error}`);
