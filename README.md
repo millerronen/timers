@@ -43,6 +43,8 @@ The Timer Service is a Node.js application that allows users to easily execute s
     - [Additional Notes](#additional-notes)
       - [Timer Action Retry Logic (NOT IMPLEMENTED)](#timer-action-retry-logic-not-implemented)
       - [Message Queueing for Long-Running Tasks (NOT IMPLEMENTED)](#message-queueing-for-long-running-tasks-not-implemented)
+      - [Ensuring Data Consistency with Transactions (NOT IMPLEMENTED)](#ensuring-data-consistency-with-transactions-not-implemented)
+    - [Another system design approaches that I have considered before this one](#another-system-design-approaches-that-i-have-considered-before-this-one)
 
 ## Features
 
@@ -50,7 +52,6 @@ The Timer Service is a Node.js application that allows users to easily execute s
 - Schedule timers for future execution.
 - Check the status of a timer by ID.
 - Automatic cleanup of completed timers.
-- Distributed locking to prevent timer execution conflicts.
 - Integration with external services through webhooks.
 
 ## Installation (Dockerized)
@@ -318,3 +319,11 @@ While retry logic is crucial for transient issues, it's also essential to distin
 In certain scenarios, WE may encounter long-running tasks or background processes that are not suitable for immediate execution within THE application. Such tasks might include heavy data processing, sending bulk emails, generating reports, or other resource-intensive operations.
 While Redis can serve as a basic queueing system for short-lived tasks, it may not be the best choice for managing long-running tasks efficiently.
 In such cases, WE might consider using a dedicated message queuing system designed for handling these types of workloads.
+
+#### Ensuring Data Consistency with Transactions (NOT IMPLEMENTED)
+
+In a high-traffic and data-intensive application like this, maintaining data consistency between different storage systems is crucial.
+I use both a relational database (MySQL) and Redis for storing and managing timer-related data.
+To ensure that the data remains consistent, when interacting with both storage systems - transactions should be considered.
+
+### Another system design approaches that I have considered before this one
