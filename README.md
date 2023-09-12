@@ -26,6 +26,7 @@ The Timer Service is a Node.js application that allows users to easily execute s
   - [Connection Pool](#connection-pool)
   - [The Timer status as a state machine](#the-timer-status-as-a-state-machine)
     - [Timer Status Explanation:](#timer-status-explanation)
+    - [UTC Time Implementation](#utc-time-implementation)
   - [Additional Requirements](#additional-requirements)
     - [Handling Invalid Inputs](#handling-invalid-inputs)
     - [Resilience Against Process Restarts](#resilience-against-process-restarts)
@@ -202,6 +203,23 @@ This means the timer's action has been carried out successfully.
 
 Failed: If, for any reason, the timer's task cannot be completed, its status will be set to "failed."
 This could occur due to various issues such as network problems, resource unavailability, or errors during execution.
+
+### UTC Time Implementation
+
+In this project, I have ve adopted a standardized approach to handle time and timestamps using Coordinated Universal Time (UTC).
+
+Key Concepts:
+Consistency: All timestamps, including timer creation times, trigger times, and status updates, are stored and processed in UTC format.
+This consistency helps avoid time zone-related issues and ensures uniformity across different parts of the system.
+
+Database Operations: When interacting with MySQL database, I use UTC timestamps to insert and query timer-related data.
+This practice ensures that timestamps in the database are always in UTC, preventing discrepancies between different time zones.
+
+Redis Sorted Sets: In Redis, I use UTC timestamps when enqueuing timers in sorted sets.
+This approach allows us to maintain a clear and predictable order for processing timers based on their trigger times.
+
+Time Zone Agnostic: By adhering to UTC throughout the application, I minimize the complexities associated with time zone conversions.
+This makes the timer management system more robust and reliable, especially when operating in diverse geographical regions.
 
 ## Additional Requirements
 
