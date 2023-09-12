@@ -34,24 +34,15 @@ The Timer Service is a Node.js application that allows users to easily execute s
       - [Connection Pooling:](#connection-pooling)
       - [Load Balancing:](#load-balancing)
   - [Ensuring Timers Are Fired Exactly Once](#ensuring-timers-are-fired-exactly-once)
-  - [Assumptions:](#assumptions)
+  - [Assumptions Made:](#assumptions-made)
   - [Retention Policy and Timer Scheduling](#retention-policy-and-timer-scheduling)
   - [Retention Policy:](#retention-policy)
     - [Simplified Logic and Database Maintenance:](#simplified-logic-and-database-maintenance)
     - [Scheduling Limit:](#scheduling-limit)
 - [Scaling for High-Traffic Production Environments](#scaling-for-high-traffic-production-environments)
-  - [Load Balancing](#load-balancing-1)
-  - [Horizontal Scaling](#horizontal-scaling)
-  - [Connection Pooling](#connection-pooling-1)
-  - [Caching](#caching)
-  - [Monitoring and Alerting](#monitoring-and-alerting)
-  - [Optimization of Code and Queries](#optimization-of-code-and-queries)
-  - [Rate Limiting and Throttling](#rate-limiting-and-throttling)
-  - [Disaster Recovery and High Availability](#disaster-recovery-and-high-availability)
-  - [Stress Testing](#stress-testing)
     - [Additional Notes](#additional-notes)
-      - [Retry Logic (Out of scope)](#retry-logic-out-of-scope)
-      - [Message Queueing for Long-Running Tasks (out of scope)](#message-queueing-for-long-running-tasks-out-of-scope)
+      - [Timer Action Retry Logic (NOT IMPLEMENTED)](#timer-action-retry-logic-not-implemented)
+      - [Message Queueing for Long-Running Tasks (NOT IMPLEMENTED)](#message-queueing-for-long-running-tasks-not-implemented)
 
 ## Features
 
@@ -248,14 +239,11 @@ In my code, a careful approach is taken to guarantee that timers are executed pr
 
     Concurrency Control: For each timer in the batch, the code ensures that only one instance of the timer is marked as "processing" using a database update. This step prevents multiple instances of the same timer from being processed simultaneously.
 
-    Enqueueing in Redis: After a timer is marked as "processing," it is enqueued in a Redis**Sorted Set**.
-    This data structure allows timers to be sorted by their trigger times, ensuring that the timer with the earliest trigger time is processed first.
+    Enqueueing in Redis: After a timer is marked as 'processing,' it is added to a Redis **Sorted Set**. This data structure ensures that timers are organized in chronological order based on their trigger times, guaranteeing that the timer with the earliest trigger time will be processed first. Additionally, it prevents the duplication of timers, ensuring that only unique timers are enqueued.
 
-    Score-Based Ordering: The timers are enqueued with a score based on their trigger times. This score-based ordering guarantees that timers are executed in chronological order, starting with the one set to trigger first.
+By adopting this approach, my code ensures that timers are processed accurately and exactly **once**, even in cases of system failures or crashes.
 
-By adopting this approach, my code ensures that timers are processed accurately and exactly once, even in cases of system failures or crashes.
-
-## Assumptions:
+## Assumptions Made:
 
 ## Retention Policy and Timer Scheduling
 
@@ -279,79 +267,45 @@ This assumption simplifies application logic and further contributes to efficien
 
 # Scaling for High-Traffic Production Environments
 
-To support a high-traffic production environment, where the application receives approximately **100** timer creation requests per second, several strategies and optimizations have been implemented:
+To support a high-traffic production environment, where the application receives **100** (or more) timer creation requests per second, several strategies and optimizations have been **implemented** and can be considered (not implemented).
 
-## Load Balancing
-
-A load balancer is deployed to distribute incoming requests evenly among multiple server instances. This ensures that no single server is overwhelmed by the traffic, and the system can effectively handle the load.
-
-## Horizontal Scaling
-
-The application architecture supports horizontal scaling, allowing for the dynamic addition of server instances as traffic increases. This elasticity ensures that the system can handle higher volumes of timer creation requests without a degradation in performance.
-
-## Connection Pooling
-
-To efficiently manage database connections and prevent connection bottlenecks, a connection pooling mechanism is in place. This ensures that database resources are utilized effectively and that the database can handle the high request rate.
-
-## Caching
-
-Where applicable, caching mechanisms are employed to reduce the load on the database. Frequently accessed or static data is cached to minimize database queries and response times.
-
-## Monitoring and Alerting
-
-Comprehensive monitoring and alerting systems are integrated into the application infrastructure. These systems provide real-time insights into application performance, server health, and database activity. Any anomalies or issues are detected promptly, allowing for proactive resolution.
-
-## Optimization of Code and Queries
-
-Code and database queries are continually optimized for performance. This includes query indexing, minimizing redundant operations, and profiling code to identify and address bottlenecks.
-
-## Rate Limiting and Throttling
-
-To prevent abuse and protect the system from excessive traffic, rate limiting and request throttling mechanisms are implemented. These mechanisms ensure that the system operates within its intended capacity.
-
-## Disaster Recovery and High Availability
-
-For business continuity, the application is designed with disaster recovery and high availability in mind. Redundancy measures and failover strategies are in place to minimize downtime and data loss in the event of unforeseen issues.
-
-## Stress Testing
-
-Regular stress testing is conducted to simulate high-traffic scenarios and identify potential weaknesses in the system. This proactive approach allows for adjustments and improvements before they impact production performance.
-
-By implementing these strategies and optimizations, we are confident in our ability to support a high-traffic production environment, meeting the demands of **100** timer creation requests per second while maintaining system stability and reliability.
-
-Certainly, you can include the information about retry logic in the "Additional Notes" section of your README.md file. Here's a generated section for your README.md:
+1. I have implementd a **batch processing** mechanism for timers that are expected to trigger within a given second.
+   This can help manage high request rates more efficiently.
+2. Appropriate **indexes** are created on the database tables to optimize query performance.
+   In my case, consider indexing columns used frequently in queries, such as status and trigger_time.
+3. We should consider **separating** the timer enqueuing (**producer**) and timer processing (**consumer**) processes.
+   Separating these responsibilities can improve the scalability.
+   By appropriate monitoring of the bottlenecks that we have, we can decide whether more producer and/or more consumers are needed.
+4. Basic **rate limiting** and throttling mechanisms was used in order to control the rate of incoming timer requests.
+   This prevents abuse and ensures fair resource allocation.
+5. **Connection pool** is an important aspect of the application's scalability and performance when working with a MySQL database.
+   We need to verify that the connection pool is configured optimally for this application's expected load.
+   Key parameters to configure include the maximum number of connections: `connectionLimit`, idle connection timeout, and connection acquisition timeout. We should adjust these values based on the application's specific needs.
+6. Database Sharding - If the database becomes a performance bottleneck, we should consider implementing database sharding to distribute data across
+   multiple database instances.
+7. Better sql queries and indexes should be considered for optimizations.
 
 ### Additional Notes
 
-#### Retry Logic (Out of scope)
+#### Timer Action Retry Logic (NOT IMPLEMENTED)
 
 In cases where the execution of a timer's task, such as the POST webhook request, encounters failures, it's essential to implement retry logic to ensure the task eventually succeeds. Retry logic helps in handling transient errors, network issues, or temporary unavailability of external services.
 
 **Retry Strategies:**
 
-1. **Exponential Backoff:** A common retry strategy is exponential backoff, where retries are attempted with increasing time intervals between them. For example, you might start with a short delay and double the delay duration with each subsequent retry.
+1. **Exponential Backoff:** A common retry strategy is exponential backoff, where retries are attempted with increasing time intervals between them. For example, we might start with a short delay and double the delay duration with each subsequent retry.
 2. **Retry Limits:** Set a maximum number of retry attempts to prevent endless retry loops in case of persistent issues. Once the maximum retry limit is reached, the system can take appropriate action, such as logging the failure or marking the timer as "failed."
 
+   For now, if the timer action fails - I am updating the status to "failed" for further investigation.
+   Hence the timer action won't be triggered again if some failures happens inside this code section.
+   Although I didn't implement such a retry logic for the timer process,
+   I did implemented a retry logic for the DB and Table creation for not failing the app until mysql is ready.
+
 **Handling Permanent Failures:**
+While retry logic is crucial for transient issues, it's also essential to distinguish between transient and permanent failures.
 
-While retry logic is crucial for transient issues, it's also essential to distinguish between transient and permanent failures. If a task repeatedly fails and retries are unsuccessful, consider marking the timer as "failed" and logging the error details for further investigation. This prevents endless retrying of tasks that are unlikely to succeed.
+#### Message Queueing for Long-Running Tasks (NOT IMPLEMENTED)
 
-**Monitoring and Alerts:**
-
-Monitoring and alerting mechanisms to keep track of task execution and retries - to notify administrators or developers when a task repeatedly fails beyond a certain threshold, enabling timely intervention.
-
-**Resilient Webhooks:**
-
-When dealing with webhooks, ensure that the external service receiving the webhook can handle retries gracefully. Many webhook consumers expect idempotent requests, meaning the same request can be safely repeated without unintended side effects.
-
-#### Message Queueing for Long-Running Tasks (out of scope)
-
-For tasks that have the potential to be long-running or resource-intensive, I considered implementing a message queuing mechanism. Message queues provide a way to offload and process tasks asynchronously, ensuring efficient resource utilization and scalability (also could have helped with the one time only timer triggering)
-
-Key Benefits of Message Queues are: Scalability and Reliability.
-
-Long-Running Tasks: Message queues are particularly useful for tasks that may take a significant amount of time to complete. They allow the timer service to continue processing other tasks while long-running tasks are handled separately.
-
-Retry Mechanism: Message queues often include built-in retry mechanisms, allowing failed tasks to be retried automatically.
-
-By documenting and implementing retry logic and message queuing, we enhance the resilience and reliability of the timer service, ensuring that tasks are eventually completed even in the face of occasional failures.
+In certain scenarios, WE may encounter long-running tasks or background processes that are not suitable for immediate execution within THE application. Such tasks might include heavy data processing, sending bulk emails, generating reports, or other resource-intensive operations.
+While Redis can serve as a basic queueing system for short-lived tasks, it may not be the best choice for managing long-running tasks efficiently.
+In such cases, WE might consider using a dedicated message queuing system designed for handling these types of workloads.
