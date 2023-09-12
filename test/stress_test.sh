@@ -12,7 +12,7 @@ DATA='{
 }'  # Replace with your desired data
 
 # Loop to send 100 POST requests
-for i in {1..1000}; do
+for i in {1..100}; do
   curl -X POST -H "Content-Type: application/json" -d "$DATA" "$URL" &
 done
 
