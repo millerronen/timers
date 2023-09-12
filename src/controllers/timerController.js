@@ -252,14 +252,14 @@ async function processTimers() {
   }
 }
 
-// Function to periodically delete completed timers older than a certain threshold
+// Function to periodically delete completed or failed timers that are older than a certain threshold
 async function cleanupCompletedTimers() {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
 
     await pool.query(
-      "DELETE FROM timers WHERE status = 'completed' AND start_time <= ?",
+      "DELETE FROM timers WHERE (status = 'completed' OR status = 'failed') AND start_time <= ?",
       [cutoffDate]
     );
   } catch (error) {

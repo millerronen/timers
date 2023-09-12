@@ -24,6 +24,8 @@ The Timer Service is a Node.js application that allows users to easily execute s
     - [Below is a breakdown of the table schema:](#below-is-a-breakdown-of-the-table-schema)
   - [Creating the Timers DB and Timers Table](#creating-the-timers-db-and-timers-table)
   - [Connection Pool](#connection-pool)
+  - [The Timer status as a state machine](#the-timer-status-as-a-state-machine)
+    - [Timer Status Explanation:](#timer-status-explanation)
   - [Additional Requirements](#additional-requirements)
     - [Handling Invalid Inputs](#handling-invalid-inputs)
     - [Resilience Against Process Restarts](#resilience-against-process-restarts)
@@ -192,6 +194,20 @@ The application also utilizes a connection pool for efficient database connectio
 The pool is configured with a limit of 10 connections, but we can adjust this based on our specific needs.
 In the event of a database connection failure or that it isn't ready yet when composing the containers for the first time, the code implements automatic retries with a maximum of 5 attempts, each spaced 5 seconds apart, before considering the issue as critical and exiting the application with exit(1)."
 
+## The Timer status as a state machine
+
+![Timer State Flow](./images/TimerStateMachine.jpg)
+
+### Timer Status Explanation:
+
+    Pending: Timers start with a "pending" status. This means they are scheduled but have not yet been processed.
+
+    Processing: When a timer is actively being queued, its status changes to "processing." This indicates that the system is currently going to perform the specified task associated with the timer.
+
+    Completed: After successfully executing the timer's task, its status is updated to "completed." This means the timer's action has been carried out successfully.
+
+    Failed: If, for any reason, the timer's task cannot be completed, its status will be set to "failed." This could occur due to various issues such as network problems, resource unavailability, or errors during execution.
+
 ## Additional Requirements
 
 ### Handling Invalid Inputs
@@ -224,7 +240,20 @@ If deployed across multiple servers, a load balancer can be used to evenly distr
 
 ## Ensuring Timers Are Fired Exactly Once
 
-TODO: Please fill in here.
+In my code, a careful approach is taken to guarantee that timers are executed precisely once, avoiding any duplicate executions or missed timers.
+
+    Fetching Pending Timers: The code fetches timers from a database that have a status of "pending" and are within a specified time window for execution.
+
+    Batch Processing: Timers are processed in batches to efficiently manage and enqueue them. This batch processing helps maintain system performance, especially when dealing with a large number of timers.
+
+    Concurrency Control: For each timer in the batch, the code ensures that only one instance of the timer is marked as "processing" using a database update. This step prevents multiple instances of the same timer from being processed simultaneously.
+
+    Enqueueing in Redis: After a timer is marked as "processing," it is enqueued in a Redis**Sorted Set**.
+    This data structure allows timers to be sorted by their trigger times, ensuring that the timer with the earliest trigger time is processed first.
+
+    Score-Based Ordering: The timers are enqueued with a score based on their trigger times. This score-based ordering guarantees that timers are executed in chronological order, starting with the one set to trigger first.
+
+By adopting this approach, my code ensures that timers are processed accurately and exactly once, even in cases of system failures or crashes.
 
 ## Assumptions:
 
