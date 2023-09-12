@@ -110,7 +110,7 @@ The Timer Service integrates with external services through webhooks. When a tim
 ## High-Level System Design
 
 Here's a high-level design of the Timer Service:
-![High Level Design of the system - Timers](./images/Timers.jpg)
+![High Level Design of the system - Timers](./images/TimersServiceArchitecture.jpg)
 
 ## Architecture
 
@@ -123,8 +123,10 @@ The Timer Service is built using Node.js and relies on the following technologie
 - Axios: A promise-based HTTP client for making webhook requests.
 
 ### Application Flow
-![Flowchart](./images/CreateTimers.jpg)
 
+![Create Timer Basic Flow](./images/CreateTimers.jpg)
+![Create Timer Basic Flow](./images/CreateTimers.jpg)
+![Create Timer Basic Flow](./images/CreateTimers.jpg)
 
 This diagram illustrates the flow of data and processes within our application. It provides an overview of how different components interact and the sequence of actions.
 
