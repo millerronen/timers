@@ -14,6 +14,7 @@ The Timer Service is a Node.js application that allows users to easily execute s
   - [Webhook Integration](#webhook-integration)
   - [High-Level System Design](#high-level-system-design)
   - [Architecture](#architecture)
+    - [Application Flow](#application-flow)
   - [Database Schema and Setup](#database-schema-and-setup)
     - [Table: timers](#table-timers)
     - [Below is a breakdown of the table schema:](#below-is-a-breakdown-of-the-table-schema)
@@ -27,9 +28,6 @@ The Timer Service is a Node.js application that allows users to easily execute s
       - [Connection Pooling:](#connection-pooling)
       - [Load Balancing:](#load-balancing)
   - [Ensuring Timers Are Fired Exactly Once](#ensuring-timers-are-fired-exactly-once)
-    - [Distributed Locking:](#distributed-locking)
-    - [Exclusive Execution:](#exclusive-execution)
-    - [Lock Release:](#lock-release)
   - [Assumptions:](#assumptions)
   - [Retention Policy and Timer Scheduling](#retention-policy-and-timer-scheduling)
   - [Retention Policy:](#retention-policy)
@@ -62,10 +60,10 @@ The Timer Service is a Node.js application that allows users to easily execute s
 
 To run the Timer Service locally or on a server, follow these steps:
 
-1. Open the downloaded zip file (or clone this repository: `git clone https://github.com/millerronen/timers.git)`
+1. Open the downloaded zip file.
 2. Navigate to the project directory: `cd timers`
-3. Run the command: `docker-compose up -d --build` (docker should be installed on your machine).
-4. Server should be running on localhost:3000 (You can check health by browsing: [localhost:3000/ping)](http://localhost:3000/ping)
+3. Run the command: `docker-compose up -d --build` (you should have docker installed on your machine).
+4. Server should be running on **localhost:3000** (You can check health by browsing: [localhost:3000/ping)](http://localhost:3000/ping)
 
 ## Usage
 
@@ -124,6 +122,8 @@ The Timer Service is built using Node.js and relies on the following technologie
 - Express.js: A web application framework for handling HTTP requests.
 - Axios: A promise-based HTTP client for making webhook requests.
 
+### Application Flow
+
 ## Database Schema and Setup
 
 ### Table: timers
@@ -167,21 +167,7 @@ It ensures that the db and its table is set up correctly during application star
 
 The application also utilizes a connection pool for efficient database connections.
 The pool is configured with a limit of 10 connections, but we can adjust this based on our specific needs.
-
-```javascript
-const pool = mysql.createPool({
-  host: config.database.host,
-  port: config.database.port,
-  user: config.database.user,
-  password: config.database.password,
-  database: config.database.databaseName,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
-
-module.exports = pool;
-```
+In the event of a database connection failure or that it isn't ready yet when composing the containers for the first time, the code implements automatic retries with a maximum of 5 attempts, each spaced 5 seconds apart, before considering the issue as critical and exiting the application with exit(1)."
 
 ## Additional Requirements
 
