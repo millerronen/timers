@@ -46,6 +46,7 @@ The Timer Service is a Node.js application that allows users to easily execute s
       - [Message Queueing for Long-Running Tasks (NOT IMPLEMENTED)](#message-queueing-for-long-running-tasks-not-implemented)
       - [Ensuring Data Consistency with Transactions (NOT IMPLEMENTED)](#ensuring-data-consistency-with-transactions-not-implemented)
     - [Another system design approach that I have considered before this one](#another-system-design-approach-that-i-have-considered-before-this-one)
+    - [Using the test frameworks: Jest and Mocha for this project](#using-the-test-frameworks-jest-and-mocha-for-this-project)
 
 ## Features
 
@@ -356,3 +357,11 @@ Choosing Between Locks and Sorted Sets:
 - For the simple use case with a limited number of timers and don't require task prioritization or high scalability, Redis locks can be a good choice due to their simplicity.
 
 - For handling a large number of timers, prioritize tasks, ensure scalability, and potentially distribute your system, Redis sorted sets (queues) are a better fit.
+
+### Using the test frameworks: Jest and Mocha for this project
+
+Working with testing frameworks such as Jest and Mocha presented a unique challenge for me,
+mainly because I hadn't used them extensively before.
+While I did create some unit tests and even a stress testing script,
+I must acknowledge that I didn't adhere strictly to achieving a high test coverage percentage in this project.
+I apologize for this deviation from best practices.
