@@ -123,6 +123,10 @@ The Timer Service is built using Node.js and relies on the following technologie
 - Axios: A promise-based HTTP client for making webhook requests.
 
 ### Application Flow
+![Flowchart](./images/CreateTimers.jpg)
+
+
+This diagram illustrates the flow of data and processes within our application. It provides an overview of how different components interact and the sequence of actions.
 
 ## Database Schema and Setup
 
