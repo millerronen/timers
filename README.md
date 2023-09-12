@@ -236,13 +236,19 @@ If deployed across multiple servers, a load balancer can be used to evenly distr
 
 In my code, a careful approach is taken to guarantee that timers are executed precisely once, avoiding any duplicate executions or missed timers.
 
-    Fetching Pending Timers: The code fetches timers from a database that have a status of "pending" and are within a specified time window for execution.
+Fetching Pending Timers: The code fetches timers from a database that have a status of "pending"
+and are within a specified time window for execution.
 
-    Batch Processing: Timers are processed in batches to efficiently manage and enqueue them. This batch processing helps maintain system performance, especially when dealing with a large number of timers.
+Batch Processing: Timers are processed in batches to efficiently manage and enqueue them.
+This batch processing helps maintain system performance, especially when dealing with a large number of timers.
 
-    Concurrency Control: For each timer in the batch, the code ensures that only one instance of the timer is marked as "processing" using a database update. This step prevents multiple instances of the same timer from being processed simultaneously.
+Concurrency Control: For each timer in the batch, the code ensures that only one instance of the timer is marked as "processing"
+using a database update. This step prevents multiple instances of the same timer from being processed simultaneously.
 
-    Enqueueing in Redis: After a timer is marked as 'processing,' it is added to a Redis **Sorted Set**. This data structure ensures that timers are organized in chronological order based on their trigger times, guaranteeing that the timer with the earliest trigger time will be processed first. Additionally, it prevents the duplication of timers, ensuring that only unique timers are enqueued.
+Enqueueing in Redis: After a timer is marked as 'processing,' it is added to a Redis **Sorted Set**.
+This data structure ensures that timers are organized in chronological order based on their trigger times,
+guaranteeing that the timer with the earliest trigger time will be processed first.
+Additionally, it prevents the duplication of timers, ensuring that only unique timers are enqueued.
 
 By adopting this approach, my code ensures that timers are processed accurately and exactly **once**, even in cases of system failures or crashes.
 
