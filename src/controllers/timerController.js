@@ -227,33 +227,39 @@ async function processTimers() {
           const timerData = JSON.parse(timer);
           const { id: timerId, url } = timerData;
 
-          // Mark the timer as "completed" in the database
-          await updateTimerStatus(timerId, "completed");
+          try {
+            // Process the timer
+            await axios.post(`${url}/${timerId}`);
 
-          // Remove the timer from Redis Sorted Set
-          await redisClient.zrem("pending_timers", timer);
+            // Mark the timer as "completed" in the database
+            await updateTimerStatus(timerId, "completed");
 
-          // Process the timer
-          await axios.post(`${url}/${timerId}`);
+            // Remove the timer from Redis Sorted Set
+            await redisClient.zrem("pending_timers", timer);
 
-          // Get the current time when the timer is executed
-          const executionTime = new Date();
+            // Get the current time when the timer is executed
+            const executionTime = new Date();
 
-          // Log the execution time
-          logger.info(
-            `Timer ID ${timerId} executed at ${executionTime.toISOString()}`
-          );
+            // Log the execution time
+            logger.info(
+              `Timer ID ${timerId} executed at ${executionTime.toISOString()}`
+            );
+          } catch (error) {
+            // Handle the external request error
+            logger.error(`Error processing timer ${timerId}: ${error}`);
+            // Mark the timer as "failed" in the database
+            await updateTimerStatus(timerId, "failed"); // Mark the timer as "failed" in the database
+          }
         })
       );
     }
   } catch (error) {
     logger.error(`Error processing timers: ${error}`);
-    await updateTimerStatus(timerId, "failed"); // Mark the timer as "failed" in the database
   }
 }
 
 // Function to periodically delete completed or failed timers that are older than a certain threshold
-async function cleanupCompletedTimers() {
+async function cleanupCompletedOrFailedTimers() {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
@@ -263,7 +269,7 @@ async function cleanupCompletedTimers() {
       [cutoffDate]
     );
   } catch (error) {
-    logger.error(`Error cleaning up completed timers: ${error}`);
+    logger.error(`Error cleaning up completed or failed timers: ${error}`);
   }
 }
 
@@ -272,5 +278,5 @@ module.exports = { createTimer, getTimerStatus };
 // Schedule recurring tasks
 setInterval(scheduleTimersInBatches, BATCH_INTERVAL);
 setInterval(checkAndTriggerExpiredTimers, TIMER_CHECK_INTERVAL);
-setInterval(cleanupCompletedTimers, CLEANUP_INTERVAL);
+setInterval(cleanupCompletedOrFailedTimers, CLEANUP_INTERVAL);
 setInterval(processTimers, PROCESSING_INTERVAL);
