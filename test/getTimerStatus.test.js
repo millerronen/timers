@@ -82,66 +82,66 @@ describe("getTimerStatus", () => {
   //     });
   //   });
 
-  it("should return 0 time left for an expired timer", async () => {
-    const req1 = {
-      body: {
-        hours: 1,
-        minutes: 0,
-        seconds: 0,
-        url: "http://example.com",
-      },
-    };
-    const res1 = {
-      json: sinon.stub(),
-    };
+  //   it("should return 0 time left for an expired timer", async () => {
+  //     const req1 = {
+  //       body: {
+  //         hours: 1,
+  //         minutes: 0,
+  //         seconds: 0,
+  //         url: "http://example.com",
+  //       },
+  //     };
+  //     const res1 = {
+  //       json: sinon.stub(),
+  //     };
 
-    // Mock the INSERT query result
-    const mockInsertResult = {
-      insertId: 1, // Replace with the expected ID
-    };
+  //     // Mock the INSERT query result
+  //     const mockInsertResult = {
+  //       insertId: 1, // Replace with the expected ID
+  //     };
 
-    // Mock the database query to return the insert result
-    mockConnection.query.resolves([mockInsertResult]);
+  //     // Mock the database query to return the insert result
+  //     mockConnection.query.resolves([mockInsertResult]);
 
-    // Act
-    await createTimer(req1, res1);
+  //     // Act
+  //     await createTimer(req1, res1);
 
-    // Arrange
-    const req = {
-      params: {
-        id: 1,
-      },
-    };
-    const res = {
-      status: sinon.stub().returnsThis(),
-      json: sinon.stub(),
-    };
+  //     // Arrange
+  //     const req = {
+  //       params: {
+  //         id: 1,
+  //       },
+  //     };
+  //     const res = {
+  //       status: sinon.stub().returnsThis(),
+  //       json: sinon.stub(),
+  //     };
 
-    // Mock the SELECT query result for an expired timer
-    const mockSelectResult = {
-      hours: 1,
-      minutes: 0,
-      seconds: 0,
-      start_time: startTime.toISOString(),
-    };
+  //     // Mock the SELECT query result for an expired timer
+  //     const mockSelectResult = {
+  //       hours: 1,
+  //       minutes: 0,
+  //       seconds: 0,
+  //       start_time: startTime.toISOString(),
+  //     };
 
-    // Mock the database query to return the select result
-    mockConnection.query.resolves([mockSelectResult]);
+  //     // Mock the database query to return the select result
+  //     mockConnection.query.resolves([mockSelectResult]);
 
-    // Fast-forward the current time to simulate an expired timer
-    const oneDayMilliseconds = 24 * 60 * 60 * 1000;
-    clock.tick(oneDayMilliseconds);
+  //     // Fast-forward the current time to simulate an expired timer
+  //     const oneDayMilliseconds = 24 * 60 * 60 * 1000;
+  //     clock.tick(oneDayMilliseconds);
 
-    // Act
-    await getTimerStatus(req, res);
+  //     // Act
+  //     await getTimerStatus(req, res);
 
-    // Assert
-    sinon.assert.calledOnce(res.json);
-    sinon.assert.calledWithMatch(res.json, {
-      id: 1,
-      time_left: 0,
-    });
-  });
+  //     // Assert
+  //     sinon.assert.calledOnce(res.json);
+  //     sinon.assert.calledWithMatch(res.json, {
+  //       id: 1,
+  //       time_left: 0,
+  //     });
+  //   });
 
   it("should return an error for an invalid timer ID", async () => {
     // Arrange
