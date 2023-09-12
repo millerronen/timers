@@ -191,13 +191,13 @@ In the event of a database connection failure or that it isn't ready yet when co
 
 ### Timer Status Explanation:
 
-    Pending: Timers start with a "pending" status. This means they are scheduled but have not yet been processed.
+Pending: Timers start with a "pending" status. This means they are scheduled but have not yet been processed.
 
-    Processing: When a timer is actively being queued, its status changes to "processing." This indicates that the system is currently going to perform the specified task associated with the timer.
+Processing: When a timer is actively being queued, its status changes to "processing." This indicates that the system is currently going to perform the specified task associated with the timer.
 
-    Completed: After successfully executing the timer's task, its status is updated to "completed." This means the timer's action has been carried out successfully.
+Completed: After successfully executing the timer's task, its status is updated to "completed." This means the timer's action has been carried out successfully.
 
-    Failed: If, for any reason, the timer's task cannot be completed, its status will be set to "failed." This could occur due to various issues such as network problems, resource unavailability, or errors during execution.
+Failed: If, for any reason, the timer's task cannot be completed, its status will be set to "failed." This could occur due to various issues such as network problems, resource unavailability, or errors during execution.
 
 ## Additional Requirements
 
