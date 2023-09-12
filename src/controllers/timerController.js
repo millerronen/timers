@@ -247,8 +247,8 @@ async function processTimers() {
           } catch (error) {
             // Handle the external request error
             logger.error(`Error processing timer ${timerId}: ${error}`);
-            // Mark the timer as "failed" in the database
             await updateTimerStatus(timerId, "failed"); // Mark the timer as "failed" in the database
+            await redisClient.zrem("pending_timers", timer); // Remove the timer from Redis Sorted Set
           }
         })
       );
