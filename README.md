@@ -47,6 +47,7 @@ The Timer Service is a Node.js application that allows users to easily execute s
       - [Ensuring Data Consistency with Transactions (NOT IMPLEMENTED)](#ensuring-data-consistency-with-transactions-not-implemented)
     - [Another system design approach that I have considered before this one](#another-system-design-approach-that-i-have-considered-before-this-one)
     - [Using the test frameworks: Jest and Mocha for this project](#using-the-test-frameworks-jest-and-mocha-for-this-project)
+    - [Some final note](#some-final-note)
 
 ## Features
 
@@ -367,3 +368,14 @@ mainly because I hadn't used them extensively before.
 While I did create some unit tests and even a stress testing script,
 I must acknowledge that I didn't adhere strictly to achieving a high test coverage percentage in this project.
 I apologize for this deviation from best practices.
+
+### Some final note
+
+Adding the **start_time** column in ascending order to the query:
+
+`SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= ? AND trigger_time >= NOW() ORDER BY trigger_time ASC, start_time ASC LIMIT ?`
+
+Can help to prioritize older timers with the same trigger_time.
+This change will ensure that among timers with the same trigger_time, the one created earlier (with the lower start_time) will be selected first.
+With this approach, I need to create a unique score that takes into account both **trigger_time** and **start_time**, ensuring that timers are correctly ordered in the Redis Sorted Set according to my new SQL query.
+Keeping in mind that adding sorting to my query may have an impact on query performance, especially if the timers table contains a large number of rows. It's a trade-off between the desired ordering and query execution time.
