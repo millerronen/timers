@@ -1,6 +1,8 @@
 const axios = require("axios");
 const pool = require("../database/db");
 const logger = require("../../utility/logger");
+const validUrl = require("valid-url");
+const { DateTime } = require("luxon");
 
 const { redisClient } = require("../../config/redisConfig");
 
@@ -18,7 +20,7 @@ async function createTimer(req, res) {
   const { hours, minutes, seconds, url } = req.body;
 
   // Validate the input
-  if (!validateInput(hours, minutes, seconds, url)) {
+  if (!validateInput(hours, minutes, seconds) || !isValidURL(url)) {
     return res.status(400).json({ error: "Invalid input data" });
   }
 
@@ -29,13 +31,12 @@ async function createTimer(req, res) {
   const totalTimeInMilliseconds = totalTimeInSeconds * 1000;
 
   // Get the current time when the timer is created in UTC
-  const creationTime = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const creationTime = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
 
   // Calculate the trigger time in UTC
-  const triggerTime = new Date(Date.now() + totalTimeInMilliseconds)
-    .toISOString()
-    .slice(0, 19)
-    .replace("T", " ");
+  const triggerTime = DateTime.fromMillis(Date.now() + totalTimeInMilliseconds)
+    .toUTC()
+    .toFormat("yyyy-MM-dd HH:mm:ss");
 
   const connection = await pool.getConnection();
 
@@ -153,14 +154,20 @@ async function enqueueTimersInRedis(timer) {
   await redisClient.zadd(redisKey, triggerTime, JSON.stringify(timerData));
 }
 
+function isValidURL(url) {
+  return validUrl.isUri(url);
+}
+
 // Create a validation function
-function validateInput(hours, minutes, seconds, url) {
+function validateInput(hours, minutes, seconds) {
   if (
     !Number.isInteger(hours) ||
+    hours < 0 ||
     !Number.isInteger(minutes) ||
+    minutes < 0 ||
     !Number.isInteger(seconds) ||
-    typeof url !== "string" ||
-    !url.startsWith("http") ||
+    seconds < 0 ||
+    (hours === 0 && minutes === 0 && seconds === 0) ||
     hours * 3600 + minutes * 60 + seconds > MAX_ALLOWED_TIME_IN_SECONDS // check if the total time exceeds 30 days - see README.md
   ) {
     return false;
@@ -266,7 +273,7 @@ async function cleanupCompletedOrFailedTimers() {
 
     await pool.query(
       "DELETE FROM timers WHERE (status = 'completed' OR status = 'failed') AND start_time <= ?",
-      [cutoffDate.toISOString().slice(0, 19).replace("T", " ")]
+      [cutoffDate.toFormat("yyyy-MM-dd HH:mm:ss")]
     );
   } catch (error) {
     logger.error(`Error cleaning up completed or failed timers: ${error}`);
