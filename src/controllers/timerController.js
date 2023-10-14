@@ -77,10 +77,10 @@ async function getTimerStatus(req, res) {
 async function scheduleTimersInBatches() {
   try {
     const endTime = new Date(Date.now() + BATCH_INTERVAL).toISOString();
-    const result = await timerQueries.fetchTimersToEnqueue(endTime);
+    const timersToEnqueue = await timerQueries.fetchTimersToEnqueue(endTime);
 
-    if (Array.isArray(result) && result.length > 0) {
-      const enqueuePromises = result.map((timer) => {
+    if (Array.isArray(timersToEnqueue) && timersToEnqueue.length > 0) {
+      const enqueuePromises = timersToEnqueue.map((timer) => {
         timerQueries.updateTimerStatus(timer.id, "processing");
         enqueueTimersInRedis(timer);
       });
