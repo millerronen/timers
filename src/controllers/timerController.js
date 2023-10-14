@@ -1,8 +1,6 @@
 const axios = require("axios");
 const pool = require("../database/db");
 const logger = require("../../utility/logger");
-const { DateTime } = require("luxon");
-
 const { redisClient } = require("../../config/redisConfig");
 const Timer = require("../models/timerModel");
 
@@ -26,27 +24,13 @@ async function createTimer(req, res) {
     return res.status(400).json({ error: "Invalid input data" });
   }
 
-  // Calculate the total time in seconds
-  const totalTimeInSeconds = hours * 3600 + minutes * 60 + seconds;
-
-  // Calculate the total time in milliseconds
-  const totalTimeInMilliseconds = totalTimeInSeconds * 1000;
-
-  // Get the current time when the timer is created in UTC
-  const creationTime = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
-
-  // Calculate the trigger time in UTC
-  const triggerTime = DateTime.fromMillis(Date.now() + totalTimeInMilliseconds)
-    .toUTC()
-    .toFormat("yyyy-MM-dd HH:mm:ss");
-
   const connection = await pool.getConnection();
 
   try {
     // Insert timer data into the database with status "pending"
     const [results] = await connection.query(
       "INSERT INTO timers (hours, minutes, seconds, url, start_time, trigger_time, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
-      [hours, minutes, seconds, url, creationTime, triggerTime]
+      [timer.hours, timer.minutes, timer.seconds, timer.url, timer.creationTime, timer.triggerTime]
     );
 
     const timerId = results.insertId;
@@ -54,7 +38,7 @@ async function createTimer(req, res) {
     // Respond with the timer ID and time left
     res.json({
       id: timerId,
-      time_left: totalTimeInSeconds,
+      time_left: timer.calculateTimeLeftInSeconds(),
     });
   } catch (error) {
     logger.error(`Error creating timer: ${error}`);

@@ -1,4 +1,6 @@
 const validUrl = require("valid-url");
+const { DateTime } = require("luxon");
+
 const MAX_ALLOWED_TIME_IN_SECONDS = 30 * 24 * 3600;
 
 class Timer {
@@ -8,18 +10,19 @@ class Timer {
     this.minutes = minutes;
     this.seconds = seconds;
     this.url = url;
-    this.startTime = Date.now(); // Store the start time
+    this.creationTime = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss"); // Store the start time
 
     // Calculate the trigger time based on the start time and timer duration
-    this.triggerTime =
-      this.startTime + (hours * 3600 + minutes * 60 + seconds) * 1000;
+    this.triggerTime = DateTime.fromMillis(Date.now() + (hours * 3600 + minutes * 60 + seconds) * 1000)
+      .toUTC()
+      .toFormat("yyyy-MM-dd HH:mm:ss");
   }
 
   // Calculate the time left in seconds
   calculateTimeLeftInSeconds() {
-    const currentTime = Date.now();
+    const currentTime = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
     const elapsedTimeInSeconds = Math.floor(
-      (currentTime - this.startTime) / 1000
+      (new Date(currentTime) - new Date(this.creationTime)) / 1000
     );
 
     const totalSeconds = this.hours * 3600 + this.minutes * 60 + this.seconds;

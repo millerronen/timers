@@ -10,7 +10,7 @@ describe("Timer", () => {
     assert.strictEqual(timer.minutes, 30);
     assert.strictEqual(timer.seconds, 0);
     assert.strictEqual(timer.url, "http://example.com");
-    assert.ok(timer.startTime); // Assert that startTime is truthy
+    assert.ok(timer.creationTime); // Assert that startTime is truthy
   });
 
   // Test case for calculating time left
@@ -20,7 +20,7 @@ describe("Timer", () => {
     // Simulate a start time (e.g., 1 minute ago)
     const currentTime = Date.now();
     const oneMinuteAgo = currentTime - 60 * 1000;
-    timer.startTime = oneMinuteAgo;
+    timer.creationTime = oneMinuteAgo;
 
     // Calculate the expected time left (in seconds)
     const expectedTimeLeft = 1 * 3600 + 29 * 60;
@@ -40,7 +40,7 @@ describe("Timer", () => {
     // Simulate a start time (e.g., 1 minute ago)
     const currentTime = Date.now();
     const oneMinuteAgo = currentTime - 60 * 1000;
-    timer.startTime = oneMinuteAgo;
+    timer.creationTime = oneMinuteAgo;
 
     // Expect the timer to have expired
     assert.strictEqual(timer.hasExpired(), true);
@@ -53,7 +53,7 @@ describe("Timer", () => {
     // Simulate a start time (e.g., 1 minute ago)
     const currentTime = Date.now();
     const oneMinuteAgo = currentTime - 60 * 1000;
-    timer.startTime = oneMinuteAgo;
+    timer.creationTime = oneMinuteAgo;
 
     // Expect the timer to be active
     assert.strictEqual(timer.isStillActive(), true);
