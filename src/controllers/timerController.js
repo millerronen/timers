@@ -3,12 +3,11 @@ const pool = require("../database/db");
 const logger = require("../../utility/logger");
 const { redisClient } = require("../../config/redisConfig");
 const Timer = require("../models/timerModel");
-const { createTimerRecord, getTimerDetailsById, fetchTimersToEnqueue, updateTimerStatus } = require("../database/timerQueries");
+const timerQueries = require("../database/timerQueries");
 
 // Constants
 const TIMER_CHECK_INTERVAL = 60 * 1000; // 1 minute
 const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
-const RETENTION_DAYS = 30;
 const BATCH_INTERVAL = 1000; // 1 seconds
 const PROCESSING_INTERVAL = 1000; // 1 second
 
@@ -25,7 +24,7 @@ async function createTimer(req, res) {
   }
 
   try {
-    const timerId = await createTimerRecord(timer);
+    const timerId = await timerQueries.createTimerRecord(timer);
     const timeLeftInSeconds = timer.calculateTimeLeftInSeconds();
 
     res.json({
@@ -47,7 +46,7 @@ async function getTimerStatus(req, res) {
   }
 
   try {
-    const timerData = await getTimerDetailsById(timerId);
+    const timerData = await timerQueries.getTimerDetailsById(timerId);
 
     if (!timerData) {
       res.status(404).json({ error: "Timer not found" });
@@ -78,11 +77,11 @@ async function getTimerStatus(req, res) {
 async function scheduleTimersInBatches() {
   try {
     const endTime = new Date(Date.now() + BATCH_INTERVAL).toISOString();
-    const result = await fetchTimersToEnqueue(endTime);
+    const result = await timerQueries.fetchTimersToEnqueue(endTime);
 
     if (Array.isArray(result) && result.length > 0) {
       const enqueuePromises = result.map((timer) => {
-        updateTimerStatus(timer.id, "processing");
+        timerQueries.updateTimerStatus(timer.id, "processing");
         enqueueTimersInRedis(timer);
       });
 
@@ -111,16 +110,13 @@ async function enqueueTimersInRedis(timer) {
 // Function to check and trigger expired timers when the application starts
 async function checkAndTriggerExpiredTimers() {
   try {
-    // Retrieve timers with status "pending" and trigger time in the past
-    const [result] = await pool.query(
-      "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= UTC_TIMESTAMP()"
-    );
+    const expiredTimers = await timerQueries.getExpiredTimers();
 
-    if (Array.isArray(result) && result.length > 0) {
+    if (Array.isArray(expiredTimers) && expiredTimers.length > 0) {
       // Create an array of promises to enqueue each timer
       const enqueuePromises = result.map((timer) => {
         enqueueTimersInRedis(timer);
-        updateTimerStatus(timer.id, "processing");
+        timerQueries.updateTimerStatus(timer.id, "processing");
       });
 
       // Use Promise.all to enqueue all timers concurrently
@@ -160,7 +156,7 @@ async function processTimers() {
             await axios.post(`${url}/${timerId}`);
 
             // Mark the timer as "completed" in the database
-            await updateTimerStatus(timerId, "completed");
+            await timerQueries.updateTimerStatus(timerId, "completed");
 
             // Remove the timer from Redis Sorted Set
             await redisClient.zrem("pending_timers", timer);
@@ -175,7 +171,7 @@ async function processTimers() {
           } catch (error) {
             // Handle the external request error
             logger.error(`Error processing timer ${timerId}: ${error}`);
-            await updateTimerStatus(timerId, "failed"); // Mark the timer as "failed" in the database
+            await timerQueries.updateTimerStatus(timerId, "failed"); // Mark the timer as "failed" in the database
             await redisClient.zrem("pending_timers", timer); // Remove the timer from Redis Sorted Set
           }
         })
@@ -187,17 +183,12 @@ async function processTimers() {
 }
 
 // Function to periodically delete completed or failed timers that are older than a certain threshold
-async function cleanupCompletedOrFailedTimers() {
+async function cleanupTimersController() {
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setUTCDate(cutoffDate.getUTCDate() - RETENTION_DAYS);
-
-    await pool.query(
-      "DELETE FROM timers WHERE (status = 'completed' OR status = 'failed') AND start_time <= ?",
-      [cutoffDate.toFormat("yyyy-MM-dd HH:mm:ss")]
-    );
+    await cleanupCompletedOrFailedTimers();
+    // Optionally, send a response indicating successful cleanup
   } catch (error) {
-    logger.error(`Error cleaning up completed or failed timers: ${error}`);
+    logger.error(`Error in cleanup timers controller: ${error.message}`);
   }
 }
 
@@ -206,5 +197,5 @@ module.exports = { createTimer, getTimerStatus };
 // Schedule recurring tasks
 setInterval(scheduleTimersInBatches, BATCH_INTERVAL);
 setInterval(checkAndTriggerExpiredTimers, TIMER_CHECK_INTERVAL);
-setInterval(cleanupCompletedOrFailedTimers, CLEANUP_INTERVAL);
+setInterval(cleanupTimersController, CLEANUP_INTERVAL);
 setInterval(processTimers, PROCESSING_INTERVAL);
