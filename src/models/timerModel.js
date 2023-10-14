@@ -1,4 +1,6 @@
-// models/timerModel.js
+const validUrl = require("valid-url");
+const MAX_ALLOWED_TIME_IN_SECONDS = 30 * 24 * 3600;
+
 class Timer {
   constructor(id, hours, minutes, seconds, url) {
     this.id = id;
@@ -37,6 +39,26 @@ class Timer {
 
     // Check if there is time left (timeLeft > 0) to determine if the timer is active
     return timeLeft > 0;
+  }
+
+  validateInput() {
+    if (
+      !Number.isInteger(this.hours) ||
+      this.hours < 0 ||
+      !Number.isInteger(this.minutes) ||
+      this.minutes < 0 ||
+      !Number.isInteger(this.seconds) ||
+      this.seconds < 0 ||
+      (this.hours === 0 && this.minutes === 0 && this.seconds === 0) ||
+      this.hours * 3600 + this.minutes * 60 + this.seconds > MAX_ALLOWED_TIME_IN_SECONDS // check if the total time exceeds 30 days - see README.md
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  isValidURL() {
+    return validUrl.isUri(this.url);
   }
 }
 

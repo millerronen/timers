@@ -1,17 +1,16 @@
 const axios = require("axios");
 const pool = require("../database/db");
 const logger = require("../../utility/logger");
-const validUrl = require("valid-url");
 const { DateTime } = require("luxon");
 
 const { redisClient } = require("../../config/redisConfig");
+const Timer = require("../models/timerModel");
 
 // Constants
 const MAX_PENDING_TIMERS = 100;
 const TIMER_CHECK_INTERVAL = 60 * 1000; // 1 minute
 const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 const RETENTION_DAYS = 30;
-const MAX_ALLOWED_TIME_IN_SECONDS = 30 * 24 * 3600;
 const BATCH_INTERVAL = 1000; // 1 seconds
 const PROCESSING_INTERVAL = 1000; // 1 second
 
@@ -19,8 +18,11 @@ const PROCESSING_INTERVAL = 1000; // 1 second
 async function createTimer(req, res) {
   const { hours, minutes, seconds, url } = req.body;
 
+  // Create an instance of Timer
+  const timer = new Timer(null, hours, minutes, seconds, url);
+
   // Validate the input
-  if (!validateInput(hours, minutes, seconds) || !isValidURL(url)) {
+  if (!timer.validateInput() || !timer.isValidURL()) {
     return res.status(400).json({ error: "Invalid input data" });
   }
 
@@ -152,27 +154,6 @@ async function enqueueTimersInRedis(timer) {
 
   // Enqueue the timer in Redis Sorted Set
   await redisClient.zadd(redisKey, triggerTime, JSON.stringify(timerData));
-}
-
-function isValidURL(url) {
-  return validUrl.isUri(url);
-}
-
-// Create a validation function
-function validateInput(hours, minutes, seconds) {
-  if (
-    !Number.isInteger(hours) ||
-    hours < 0 ||
-    !Number.isInteger(minutes) ||
-    minutes < 0 ||
-    !Number.isInteger(seconds) ||
-    seconds < 0 ||
-    (hours === 0 && minutes === 0 && seconds === 0) ||
-    hours * 3600 + minutes * 60 + seconds > MAX_ALLOWED_TIME_IN_SECONDS // check if the total time exceeds 30 days - see README.md
-  ) {
-    return false;
-  }
-  return true;
 }
 
 // Function to update the status of a timer in the database
