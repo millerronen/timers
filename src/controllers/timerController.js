@@ -3,11 +3,9 @@ const pool = require("../database/db");
 const logger = require("../../utility/logger");
 const { redisClient } = require("../../config/redisConfig");
 const Timer = require("../models/timerModel");
-const { createTimerRecord, getTimerDetailsById } = require("../database/timerQueries");
-
+const { createTimerRecord, getTimerDetailsById, fetchTimersToEnqueue } = require("../database/timerQueries");
 
 // Constants
-const MAX_PENDING_TIMERS = 100;
 const TIMER_CHECK_INTERVAL = 60 * 1000; // 1 minute
 const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 const RETENTION_DAYS = 30;
@@ -80,7 +78,8 @@ async function getTimerStatus(req, res) {
 
 async function scheduleTimersInBatches() {
   try {
-    const result = await fetchTimersToEnqueue();
+    const endTime = new Date(Date.now() + BATCH_INTERVAL).toISOString();
+    const result = await fetchTimersToEnqueue(endTime);
 
     if (Array.isArray(result) && result.length > 0) {
       // Create an array of promises to enqueue each timer
@@ -95,18 +94,6 @@ async function scheduleTimersInBatches() {
   } catch (error) {
     logger.error("Error scheduling timers:", error);
   }
-}
-
-async function fetchTimersToEnqueue() {
-  const endTime = new Date(Date.now() + BATCH_INTERVAL).toISOString();
-
-  // Retrieve timers with status "pending" and trigger time within the time window
-  const [result] = await pool.query(
-    "SELECT * FROM timers WHERE status = 'pending' AND trigger_time <= ? AND trigger_time >= NOW() LIMIT ?",
-    [endTime, MAX_PENDING_TIMERS]
-  );
-
-  return result;
 }
 
 async function enqueueTimersInRedis(timer) {
