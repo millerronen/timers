@@ -57,8 +57,20 @@ async function fetchTimersToEnqueue(endTime) {
     return result;
 }
 
+async function updateTimerStatus(timerId, status) {
+    try {
+        await pool.query("UPDATE timers SET status = ? WHERE id = ?", [
+            status,
+            timerId,
+        ]);
+    } catch (error) {
+        logger.error("Error updating timer status:", error);
+    }
+}
+
 module.exports = {
     createTimerRecord,
     getTimerDetailsById,
     fetchTimersToEnqueue,
+    updateTimerStatus,
 };

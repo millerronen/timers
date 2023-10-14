@@ -3,7 +3,7 @@ const pool = require("../database/db");
 const logger = require("../../utility/logger");
 const { redisClient } = require("../../config/redisConfig");
 const Timer = require("../models/timerModel");
-const { createTimerRecord, getTimerDetailsById, fetchTimersToEnqueue } = require("../database/timerQueries");
+const { createTimerRecord, getTimerDetailsById, fetchTimersToEnqueue, updateTimerStatus } = require("../database/timerQueries");
 
 // Constants
 const TIMER_CHECK_INTERVAL = 60 * 1000; // 1 minute
@@ -68,7 +68,6 @@ async function getTimerStatus(req, res) {
       // Timer has expired
       res.json({ id: timerId, time_left: 0 });
     } else {
-      // Timer is still active
       res.json({ id: timerId, time_left: timeLeftInSeconds });
     }
   } catch (error) {
@@ -82,13 +81,11 @@ async function scheduleTimersInBatches() {
     const result = await fetchTimersToEnqueue(endTime);
 
     if (Array.isArray(result) && result.length > 0) {
-      // Create an array of promises to enqueue each timer
       const enqueuePromises = result.map((timer) => {
         updateTimerStatus(timer.id, "processing");
         enqueueTimersInRedis(timer);
       });
 
-      // Use Promise.all to enqueue all timers concurrently
       await Promise.all(enqueuePromises);
     }
   } catch (error) {
@@ -109,18 +106,6 @@ async function enqueueTimersInRedis(timer) {
 
   // Enqueue the timer in Redis Sorted Set
   await redisClient.zadd(redisKey, triggerTime, JSON.stringify(timerData));
-}
-
-// Function to update the status of a timer in the database
-async function updateTimerStatus(timerId, status) {
-  try {
-    await pool.query("UPDATE timers SET status = ? WHERE id = ?", [
-      status,
-      timerId,
-    ]);
-  } catch (error) {
-    logger.error("Error updating timer status:", error);
-  }
 }
 
 // Function to check and trigger expired timers when the application starts
