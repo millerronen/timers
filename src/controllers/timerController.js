@@ -123,7 +123,7 @@ async function scheduleTimersInBatches() {
       await Promise.all(enqueuePromises);
     }
   } catch (error) {
-    log.error("Error scheduling timers:", error);
+    logger.error("Error scheduling timers:", error);
   }
 }
 
@@ -183,7 +183,7 @@ async function updateTimerStatus(timerId, status) {
       timerId,
     ]);
   } catch (error) {
-    log.error("Error updating timer status:", error);
+    logger.error("Error updating timer status:", error);
   }
 }
 
@@ -206,7 +206,7 @@ async function checkAndTriggerExpiredTimers() {
       await Promise.all(enqueuePromises);
     }
   } catch (error) {
-    log.error("Error checking and triggering expired timers:", error);
+    logger.error("Error checking and triggering expired timers:", error);
   }
 }
 
