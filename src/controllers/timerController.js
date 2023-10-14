@@ -3,6 +3,8 @@ const pool = require("../database/db");
 const logger = require("../../utility/logger");
 const { redisClient } = require("../../config/redisConfig");
 const Timer = require("../models/timerModel");
+const { createTimerRecord, getTimerDetailsById } = require("../database/timerQueries");
+
 
 // Constants
 const MAX_PENDING_TIMERS = 100;
@@ -24,27 +26,16 @@ async function createTimer(req, res) {
     return res.status(400).json({ error: "Invalid input data" });
   }
 
-  const connection = await pool.getConnection();
-
   try {
-    // Insert timer data into the database with status "pending"
-    const [results] = await connection.query(
-      "INSERT INTO timers (hours, minutes, seconds, url, start_time, trigger_time, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
-      [timer.hours, timer.minutes, timer.seconds, timer.url, timer.creationTime, timer.triggerTime]
-    );
+    const timerId = await createTimerRecord(timer);
+    const timeLeftInSeconds = timer.calculateTimeLeftInSeconds();
 
-    const timerId = results.insertId;
-
-    // Respond with the timer ID and time left
     res.json({
       id: timerId,
-      time_left: timer.calculateTimeLeftInSeconds(),
+      time_left: timeLeftInSeconds,
     });
   } catch (error) {
-    logger.error(`Error creating timer: ${error}`);
     res.status(500).json({ error: "Internal Server Error" });
-  } finally {
-    connection.release(); // Release the connection back to the pool
   }
 }
 
@@ -58,19 +49,13 @@ async function getTimerStatus(req, res) {
   }
 
   try {
-    // Query the database to get the timer details
-    const [results] = await pool.query(
-      "SELECT hours, minutes, seconds, start_time FROM timers WHERE id = ?",
-      [timerId]
-    );
+    const timerData = await getTimerDetailsById(timerId);
 
-    if (results.length === 0) {
-      // Timer not found
+    if (!timerData) {
       res.status(404).json({ error: "Timer not found" });
       return;
     }
 
-    const timerData = results[0];
     const currentTime = new Date();
     const startTime = new Date(timerData.start_time);
     const elapsedTimeInSeconds = Math.floor((currentTime - startTime) / 1000);
@@ -89,7 +74,6 @@ async function getTimerStatus(req, res) {
       res.json({ id: timerId, time_left: timeLeftInSeconds });
     }
   } catch (error) {
-    logger.error(`Error getting timer status: ${error}`);
     res.status(500).json({ error: "Internal Server Error" });
   }
 }
