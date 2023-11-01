@@ -94,7 +94,7 @@ async function scheduleTimersInBatches() {
 
 async function enqueueTimersInRedis(timer) {
   const redisKey = "pending_timers";
-  const { id: timerId, url, trigger_time, status } = timer;
+  const { id: timerId, url, trigger_time } = timer;
   const timerData = {
     id: timerId,
     url,
